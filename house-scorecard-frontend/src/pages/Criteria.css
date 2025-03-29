@@ -1,0 +1,338 @@
+/* src/pages/Criteria.css */
+
+/* --- Base Container and Headers --- */
+.criteria-container {
+    max-width: 1100px; /* Allow more width for sections */
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .criteria-container h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #2c3e50;
+  }
+  
+  .criteria-description {
+    text-align: center;
+    color: #7f8c8d;
+    margin-bottom: 35px; /* Increased margin */
+    max-width: 700px; /* Adjust max width */
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6; /* Improved readability */
+  }
+  
+  /* --- Section Layout --- */
+  .criteria-sections {
+    display: grid;
+    /* Responsive columns, minimum 320px width */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 30px;
+  }
+  
+  .criteria-section {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); /* Slightly increased shadow */
+    border: 1px solid #e9ecef; /* Lighter border */
+    display: flex;
+    flex-direction: column; /* Stack elements vertically */
+  }
+  
+  .criteria-section h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #34495e;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 10px;
+    font-size: 1.4em;
+    display: flex; /* Align icon and text */
+    align-items: center;
+  }
+  
+  .criteria-section h2 i {
+    margin-right: 12px; /* Increased icon margin */
+    width: 20px; /* Ensure icon alignment */
+    text-align: center;
+    /* Default icon color (can be overridden) */
+    color: #3498db;
+  }
+  /* Specific icon colors */
+  .criteria-section:nth-of-type(1) h2 i { color: #f1c40f; } /* Must-Have: Yellow */
+  .criteria-section:nth-of-type(2) h2 i { color: #2ecc71; } /* Nice-to-Have: Green */
+  .criteria-section:nth-of-type(3) h2 i { color: #e74c3c; } /* Deal Breaker: Red */
+  
+  
+  .criteria-section > p { /* Direct child p (description) */
+    font-size: 0.9em;
+    color: #555; /* Slightly darker description text */
+    margin-bottom: 20px;
+    flex-grow: 0; /* Prevent description from growing */
+  }
+  
+  /* --- Category Grouping --- */
+  .category-group {
+    margin-bottom: 20px; /* Increased space between category groups */
+  }
+  .category-group:last-child {
+    margin-bottom: 0;
+  }
+  
+  .category-header {
+    font-size: 0.85em; /* Slightly smaller category header */
+    font-weight: 700; /* Bolder header */
+    color: #95a5a6; /* Grey color */
+    margin-bottom: 10px; /* Increased space below header */
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ecf0f1; /* Lighter border */
+    text-transform: uppercase;
+    letter-spacing: 0.8px; /* Increased letter spacing */
+  }
+  .category-group .criteria-list {
+      margin-bottom: 0; /* No bottom margin for list within group */
+      min-height: initial; /* Override base min-height if set */
+  }
+  
+  /* --- Criteria List Styling --- */
+  .criteria-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 25px 0; /* Space before the add form */
+    flex-grow: 1; /* Allow list to take available space */
+    min-height: 100px; /* Ensure some minimum space */
+  }
+  
+  /* Base styles for list item - Applies to both display & edit */
+  .criteria-list li.criterion-item {
+    background-color: #fdfdff;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border: 1px solid #eef1f5;
+    display: flex; /* Use flex for layout */
+    align-items: center; /* Vertical alignment */
+    font-size: 0.95em;
+    min-height: 52px;
+    transition: background-color 0.2s, border-color 0.2s;
+    gap: 10px; /* Gap between direct children (text span and details container) */
+  }
+  
+  /* --- Display View Specific Styles (when NOT .editing) --- */
+  /* Styles specific to the list item when it's NOT being edited */
+  .criteria-list li.criterion-item:not(.editing) {
+       flex-wrap: wrap;  /* Generally avoid wrapping in display mode unless absolutely necessary */
+  }
+  
+  .criteria-list li.criterion-item:not(.editing) .criterion-text {
+     flex-grow: 1; /* Allow text to take up available horizontal space */
+     flex-shrink: 1; /* IMPORTANT: Allow text element to shrink if needed */
+     word-break: break-word; /* Allow long words to break and wrap */
+     overflow-wrap: break-word; /* Alternative wrapping property */
+     min-width: 0; /* CRITICAL: Allows shrinking below intrinsic content size */
+     margin-right: 5px; /* Small space before the details container */
+     line-height: 1.4; /* Improve readability for wrapped text */
+  }
+  
+  /* Container for tags, weight, and action buttons in display mode */
+  .criteria-list li.criterion-item:not(.editing) .criterion-details-actions {
+      display: flex; /* Use flex to lay out items inside horizontally */
+      align-items: center; /* Vertically align items */
+      gap: 10px; /* Space between tags, weight, actions */
+      flex-shrink: 0; /* PREVENT this container itself from shrinking */
+      /* Remove margin-left: auto; let natural flex positioning work */
+  }
+  
+  /* Elements INSIDE the details container in Display View */
+  .criteria-list li.criterion-item:not(.editing) .category-tag,
+  .criteria-list li.criterion-item:not(.editing) .rating-type-tag,
+  .criteria-list li.criterion-item:not(.editing) .weight-display {
+      white-space: nowrap; /* Prevent tags/weight text from wrapping */
+      margin: 0; /* Remove individual margins, rely on parent gap */
+  }
+  /* Specific styling for tags/labels */
+  .criteria-list li.criterion-item:not(.editing) .category-tag {
+      background-color: #ecf0f1; color: #7f8c8d; padding: 3px 9px;
+      border-radius: 12px; font-size: 0.75em; font-weight: 500;
+  }
+  .criteria-list li.criterion-item:not(.editing) .rating-type-tag {
+      font-style: italic; color: #95a5a6; font-size: 0.8em;
+      background: none; padding: 0; /* Ensure no background/padding if just text */
+  }
+  .criteria-list li.criterion-item:not(.editing) .weight-display {
+      font-size: 0.85em; color: #7f8c8d; font-weight: 500;
+      background: none; padding: 0; /* Ensure no background/padding */
+  }
+  
+  /* Item Actions (Edit/Delete buttons) in Display View */
+  .criteria-list li.criterion-item:not(.editing) .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0; /* Hide by default */
+    transition: opacity 0.2s ease-in-out;
+    margin-left: 5px; /* Space from preceding item */
+  }
+  .criteria-list li.criterion-item:not(.editing):hover .item-actions {
+    opacity: 1; /* Show on hover */
+  }
+  /* Buttons styling */
+  .btn-edit, .btn-delete {
+    background: none; border: none; cursor: pointer;
+    font-size: 1em; padding: 5px; transition: color 0.2s, transform 0.1s;
+    line-height: 1;
+  }
+  .btn-edit { color: #5dade2; }
+  .btn-edit:hover { color: #3498db; transform: scale(1.1); }
+  .btn-delete { color: #f1948a; }
+  .btn-delete:hover { color: #e74c3c; transform: scale(1.1); }
+  
+  
+  /* --- Editing Form Styles --- */
+  /* Styles specific to the list item when it HAS the .editing class */
+  .criteria-list li.criterion-item.editing {
+      background-color: #eef5ff; /* Different background when editing */
+      border-color: #cce0ff;
+      flex-wrap: wrap; /* Allow controls to wrap onto next line if needed */
+      align-items: flex-start; /* Align wrapped items to top */
+  }
+  
+  /* Container for edit form controls */
+  .criterion-item.editing .edit-form {
+    display: flex;
+    flex-grow: 1; /* Take full width */
+    align-items: center; /* Align items vertically */
+    gap: 10px;
+    width: 100%;
+    flex-wrap: wrap; /* Allow controls inside to wrap */
+  }
+  
+  /* Base styles for Edit Inputs */
+  .criterion-item.editing .edit-input-text,
+  .criterion-item.editing .edit-input-category,
+  .criterion-item.editing .edit-input-weight,
+  .criterion-item.editing .edit-rating-type select {
+      padding: 7px 9px;
+      border: 1px solid #a6d5ff;
+      border-radius: 4px;
+      font-size: 0.9em;
+      background-color: #fff;
+      line-height: 1.4;
+      height: 34px; /* Consistent height */
+  }
+  /* Focus styles for edit inputs */
+  .criterion-item.editing .edit-input-text:focus,
+  .criterion-item.editing .edit-input-category:focus,
+  .criterion-item.editing .edit-input-weight:focus,
+  .criterion-item.editing .edit-rating-type select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* Specific Sizing/Flex for Edit Inputs */
+  .criterion-item.editing .edit-input-text { flex: 3 1 150px; min-width: 150px; }
+  .criterion-item.editing .edit-input-category { flex: 2 1 100px; min-width: 100px; }
+  .criterion-item.editing .edit-rating-type {
+      display: flex; align-items: center; gap: 5px;
+      flex: 2 1 140px; min-width: 140px;
+  }
+  .criterion-item.editing .edit-rating-type label { font-size: 0.85em; color: #555; white-space: nowrap; }
+  .criterion-item.editing .edit-rating-type select { flex-grow: 1; cursor: pointer; height: 34px; }
+  
+  .criterion-item.editing .edit-weight {
+      display: flex; align-items: center; gap: 5px;
+      flex: 1 1 110px; min-width: 110px;
+  }
+  .criterion-item.editing .edit-weight label { font-size: 0.85em; color: #555; white-space: nowrap; }
+  .criterion-item.editing .edit-input-weight { width: 55px; text-align: center; height: 34px; }
+  
+  /* Edit Action Buttons Container */
+  .criterion-item.editing .edit-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto; /* Push to the right */
+    /* Ensure vertical alignment with inputs if wrapping occurs */
+    align-self: center;
+  }
+  
+  /* Small Save/Cancel Buttons */
+  .btn-save.small, .btn-cancel.small {
+      background: none; border: none; padding: 5px;
+      cursor: pointer; font-size: 1.3em; transition: color 0.2s, transform 0.1s;
+      line-height: 1;
+  }
+  .btn-save.small { color: #58d68d; }
+  .btn-save.small:hover { color: #2ecc71; transform: scale(1.1); }
+  .btn-cancel.small { color: #f1948a; }
+  .btn-cancel.small:hover { color: #e74c3c; transform: scale(1.1); }
+  
+  
+  /* --- Add Criterion Form Styling (Bottom of Section) --- */
+  .add-criterion-form {
+    display: flex;
+    gap: 10px;
+    margin-top: auto; /* Pushes form to bottom */
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+    flex-wrap: wrap; /* Allow wrapping */
+    align-items: flex-end; /* Align items to bottom if wrapping */
+  }
+  
+  /* Add Form Inputs: Base styles */
+  .add-criterion-form .add-input-text,
+  .add-criterion-form .add-input-category,
+  .add-criterion-form .weight-input input,
+  .add-criterion-form .rating-type-select select {
+      padding: 9px 11px;
+      border: 1px solid #dadedf;
+      border-radius: 4px;
+      font-size: 0.9em;
+      line-height: 1.4;
+      height: 38px; /* Consistent height */
+  }
+  .add-criterion-form .add-input-text:focus,
+  .add-criterion-form .add-input-category:focus,
+  .add-criterion-form .weight-input input:focus,
+  .add-criterion-form .rating-type-select select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* Specific Sizing/Flex for Add Form Inputs */
+  .add-criterion-form .add-input-text { flex: 3 1 160px; min-width: 160px; }
+  .add-criterion-form .add-input-category { flex: 2 1 110px; min-width: 110px; }
+  .add-criterion-form .rating-type-select {
+      display: flex; align-items: center; gap: 5px;
+      flex: 2 1 150px; min-width: 150px;
+  }
+  .add-criterion-form .rating-type-select label { font-size: 0.85em; color: #555; white-space: nowrap; }
+  .add-criterion-form .rating-type-select select { flex-grow: 1; background-color: #fff; cursor: pointer; height: 38px; }
+  
+  .add-criterion-form .weight-input {
+      display: flex; align-items: center; gap: 5px;
+      flex: 1 1 140px; min-width: 140px;
+  }
+  .add-criterion-form .weight-input label { font-size: 0.85em; color: #555; white-space: nowrap; }
+  .add-criterion-form .weight-input input { width: 55px; text-align: center; height: 38px; }
+  
+  /* Add Button */
+  .btn-add-small {
+      padding: 8px 15px; font-size: 0.9em; background-color: #2ecc71;
+      color: white; border: none; border-radius: 4px; cursor: pointer;
+      transition: background-color 0.2s; flex-shrink: 0;
+      height: 38px; /* Match input height */
+      margin-left: auto; /* Push to right */
+      font-weight: 500;
+  }
+  .btn-add-small:hover { background-color: #27ae60; }
+  .btn-add-small i { margin-right: 6px; }
+  
+  /* Minor tweak for labels inside flex containers */
+  .weight-input label, .rating-type-select label,
+  .edit-weight label, .edit-rating-type label {
+      line-height: 1; /* Prevent label line height causing alignment issues */
+  }

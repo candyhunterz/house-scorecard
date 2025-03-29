@@ -1,0 +1,167 @@
+/* src/pages/Compare.css */
+.compare-container {
+    padding: 20px;
+  }
+  
+  .compare-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
+  }
+  
+  .compare-container.empty {
+      text-align: center;
+      margin-top: 50px;
+      color: #7f8c8d;
+  }
+  .compare-container.empty p {
+      margin-bottom: 25px;
+  }
+  
+  
+  /* Wrapper needed for horizontal scrolling */
+  .compare-table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Enable horizontal scroll */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  
+  .compare-table {
+    width: 100%;
+    min-width: 800px; /* Minimum width before scroll starts */
+    border-collapse: collapse;
+    table-layout: fixed; /* Helps with column width consistency */
+  }
+  
+  .compare-table th,
+  .compare-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    border-right: 1px solid #eee; /* Vertical lines */
+    vertical-align: middle;
+    white-space: nowrap; /* Prevent text wrapping initially */
+    overflow: hidden; /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis (...) for overflow */
+  }
+  .compare-table th:last-child,
+  .compare-table td:last-child {
+      border-right: none; /* Remove last vertical line */
+  }
+  
+  /* Header Styling */
+  .compare-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    border-bottom-width: 2px;
+    border-bottom-color: #ddd;
+    position: sticky; /* Make header sticky vertically */
+    top: 0; /* Stick to the top */
+    z-index: 10; /* Ensure header is above body */
+  }
+  
+  /* Make first column sticky */
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 5; /* Below header, above other cells */
+    background-color: #ffffff; /* Match background */
+    border-right: 2px solid #ccc; /* Thicker line for sticky col */
+  }
+  .sticky-col.header-cell {
+      background-color: #f8f9fa; /* Match header background */
+      z-index: 11; /* Above other header cells */
+  }
+  
+  
+  /* Specific Column Widths (Adjust as needed) */
+  .criteria-col {
+    width: 250px; /* Fixed width for criteria column */
+    white-space: normal; /* Allow criteria text to wrap */
+  }
+  .property-col {
+    width: 200px; /* Fixed width for property columns */
+  }
+  
+  
+  /* Header Links */
+  .header-cell a {
+      color: #34495e;
+      text-decoration: none;
+      font-weight: 600;
+      display: block; /* Make link fill cell */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+  }
+  .header-cell a:hover {
+      color: #3498db;
+  }
+  
+  /* Data Cell Styling */
+  .data-cell {
+    font-size: 0.95em;
+    color: #333;
+  }
+  
+  /* Highlighted Rows */
+  .highlight-row td {
+      background-color: #fcf8e3; /* Light yellow highlight */
+      font-weight: bold;
+  }
+  
+  /* Score Cell */
+  .score-cell {
+      text-align: center;
+  }
+  .score-badge-table {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-weight: bold;
+      color: #fff;
+      font-size: 0.9em;
+  }
+  .score-badge-table.high { background-color: #2ecc71; }
+  .score-badge-table.medium { background-color: #f39c12; }
+  .score-badge-table.low { background-color: #e74c3c; }
+  .score-badge-table.zero { background-color: #7f8c8d; color: #fff;} /* Grey for explicit 0 */
+  
+  /* Rating Cell Styling */
+  .rating-cell {
+      text-align: center;
+  }
+  .rating-display {
+      font-size: 0.9em;
+  }
+  .rating-display.met i { color: #27ae60; }
+  .rating-display.not-met i { color: #c0392b; }
+  .rating-display.not-rated { color: #95a5a6; font-style: italic; }
+  .rating-display.rated { font-weight: 500; } /* Make rated number bold */
+  .rating-display i { margin-right: 4px; }
+  
+  /* Weight Label in Table */
+  .weight-label-table {
+      font-size: 0.8em;
+      color: #7f8c8d;
+      margin-left: 4px;
+  }
+  
+  /* Divider Row */
+  .divider-row td {
+      border-bottom: 2px solid #ddd;
+      padding: 2px; /* Minimal height */
+      background-color: #f9f9f9;
+  }
+  
+  /* Table Body Rows Hover */
+  .compare-table tbody tr:not(.divider-row):hover td:not(.sticky-col) {
+      background-color: #f5faff; /* Light blue hover */
+  }
+  .compare-table tbody tr:not(.divider-row):hover td.sticky-col {
+       background-color: #eaf5ff; /* Slightly darker blue for sticky */
+  }

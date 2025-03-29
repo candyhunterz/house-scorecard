@@ -1,0 +1,48 @@
+/* src/pages/MapPage.css */
+.map-page-container {
+    /* Allow map container to take available height */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Important: Needs height context from parent */
+    /* Or set a fixed height for the page container if needed */
+    /* e.g., height: calc(100vh - header_height - padding); */
+    padding: 0; /* Remove default padding if it interferes */
+  }
+  
+  .map-page-container h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    padding: 0 20px; /* Add padding back for title */
+    flex-shrink: 0; /* Prevent title from shrinking */
+  }
+  
+  /* Style the Map Container itself */
+  .map-view {
+    flex-grow: 1; /* Make map take remaining vertical space */
+    height: 100%; /* Ensure it takes full height of its flex container */
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 0; /* Ensure map is below other UI if needed */
+  }
+  
+  /* Leaflet Popup Customization (Optional) */
+  .leaflet-popup-content-wrapper {
+    border-radius: 6px;
+  }
+  .leaflet-popup-content {
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+  .leaflet-popup-content strong {
+    color: #34495e;
+  }
+  .leaflet-popup-content a {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .leaflet-popup-content a:hover {
+    text-decoration: underline;
+  }

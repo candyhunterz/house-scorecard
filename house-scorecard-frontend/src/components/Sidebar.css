@@ -1,0 +1,109 @@
+/* src/components/Sidebar.css */
+.sidebar {
+    /* Uses styles from global.css for width, background, color */
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Make sidebar full height */
+    position: sticky; /* Stick to the side on scroll */
+    top: 0;
+  }
+  
+  .sidebar-header {
+      padding: 10px 0;
+      margin-bottom: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(236, 240, 241, 0.2); /* Light border */
+  }
+  
+  .sidebar-header h2 {
+      margin: 0;
+      font-size: 1.4em;
+      color: #ecf0f1;
+  }
+  
+  .sidebar-nav {
+      flex-grow: 1; /* Takes available space */
+  }
+  
+  .sidebar-nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+  }
+  
+  .sidebar-nav li a {
+      display: block;
+      padding: 12px 20px;
+      color: #bdc3c7; /* Lighter grey for inactive */
+      text-decoration: none;
+      transition: background-color 0.2s, color 0.2s;
+      border-radius: 4px;
+      margin-bottom: 5px;
+  }
+  
+  .sidebar-nav li a:hover {
+      background-color: #34495e;
+      color: #ecf0f1; /* White on hover */
+  }
+  
+
+  
+  .sidebar-nav li a i {
+      margin-right: 10px;
+      width: 20px; /* Align icons */
+      text-align: center;
+  }
+  
+  .sidebar-footer {
+      margin-top: auto; /* Pushes footer to bottom */
+      padding-top: 15px;
+      border-top: 1px solid rgba(236, 240, 241, 0.2);
+  }
+  
+  .sidebar-footer a {
+       display: block;
+      padding: 12px 20px;
+      color: #bdc3c7;
+       text-decoration: none;
+       transition: color 0.2s;
+  }
+  .sidebar-footer a:hover {
+      color: #ecf0f1;
+  }
+  .sidebar-footer a i {
+      margin-right: 10px;
+  }
+  .sidebar-nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Style the NavLink (<a> tag) directly */
+.sidebar-nav li a {
+    display: block;
+    padding: 12px 20px;
+    color: #bdc3c7;
+    text-decoration: none;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+    margin-bottom: 5px; /* Apply margin here or on li */
+}
+
+.sidebar-nav li a:hover {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+/* Style the active NavLink */
+.sidebar-nav li a.active {
+    background-color: #3498db;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.sidebar-nav li a i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}

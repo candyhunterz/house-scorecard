@@ -1,0 +1,144 @@
+/* src/pages/AddProperty.css */
+.add-property-container {
+    max-width: 700px; /* Limit form width for readability */
+    margin: 0 auto; /* Center the form container */
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .add-property-container h1 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #2c3e50;
+  }
+  
+  .add-property-form .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .add-property-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .add-property-form input[type="text"],
+  .add-property-form input[type="number"],
+  .add-property-form input[type="url"],
+  .add-property-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .add-property-form input:focus,
+  .add-property-form textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }
+  
+  /* Style required fields indicator (browser default or custom) */
+  .add-property-form label:has(+ :required)::after {
+    content: " *";
+    color: #e74c3c;
+    font-weight: normal;
+    margin-left: 2px;
+  }
+  
+  /* Layout for multiple fields in a row */
+  .add-property-form .form-row {
+    display: flex;
+    gap: 20px; /* Space between fields */
+    margin-bottom: 20px;
+  }
+  
+  .add-property-form .form-row .form-group {
+    flex: 1; /* Each field takes equal space */
+    margin-bottom: 0; /* Remove bottom margin as row has it */
+  }
+  
+  /* Style Textarea */
+  .add-property-form textarea {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 80px;
+  }
+  
+  /* Action Buttons */
+  .add-property-form .form-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end; /* Align buttons to the right */
+    gap: 15px; /* Space between buttons */
+  }
+  
+  /* Basic Button Styling (add to global.css or keep here) */
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    font-weight: 500;
+  }
+  
+  .btn-primary {
+    background-color: #3498db;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background-color: #2980b9;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  .btn-secondary {
+    background-color: #ecf0f1;
+    color: #34495e;
+    border: 1px solid #bdc3c7;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #dfe4e7;
+  }
+  
+  /* Responsive adjustments (optional) */
+  @media (max-width: 600px) {
+    .add-property-form .form-row {
+      flex-direction: column; /* Stack fields vertically on small screens */
+      gap: 0;
+    }
+     .add-property-form .form-row .form-group {
+       margin-bottom: 20px; /* Add margin back when stacked */
+     }
+     .add-property-form .form-actions {
+       flex-direction: column-reverse; /* Stack buttons, primary on bottom */
+       gap: 10px;
+     }
+      .add-property-form .form-actions .btn {
+        width: 100%; /* Make buttons full width */
+      }
+  }
+
+  /* Style the textarea for image URLs */
+.add-property-form textarea#imageUrlsString {
+  resize: vertical;
+  min-height: 80px;
+  font-family: monospace; /* Good for URLs */
+  font-size: 0.9em;
+}
+
+/* Style the help text */
+.add-property-form .form-group small {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.8em;
+  color: #6c757d;
+}

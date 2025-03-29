@@ -1,0 +1,542 @@
+/* src/pages/PropertyDetail.css */
+.property-detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 25px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  
+  .property-detail-container h1 {
+    margin-top: 10px;
+    margin-bottom: 25px;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+  }
+  
+  .btn-back {
+    background: none;
+    border: 1px solid #ccc;
+    color: #555;
+    padding: 8px 15px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+  }
+  
+  .btn-back:hover {
+    background-color: #f0f0f0;
+    border-color: #bbb;
+  }
+  
+  .btn-back i {
+    margin-right: 8px;
+  }
+  
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr; /* Adjust ratio as needed */
+    gap: 30px;
+  }
+  
+  /* Image Section */
+  .detail-image-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .detail-image {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    object-fit: cover;
+    border: 1px solid #eee;
+  }
+  
+  .detail-image-placeholder {
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+    background-color: #e9ecef;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+  }
+  
+  .detail-image-placeholder i {
+    font-size: 3em;
+    margin-bottom: 10px;
+  }
+  
+  .listing-link {
+    display: inline-block; /* Allows margin */
+    margin-top: 10px;
+  }
+  
+  /* Outline Button Style (add to global if used elsewhere) */
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid #3498db;
+    color: #3498db;
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    text-align: center;
+  }
+  .btn-outline:hover {
+    background-color: #3498db;
+    color: white;
+  }
+  .btn-outline i {
+    margin-right: 8px;
+  }
+  
+  
+  /* Info Section */
+  .detail-info-section {
+    /* Grid column takes care of placement */
+  }
+  
+  .detail-item {
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    color: #333;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #eee; /* Separator */
+  }
+  .detail-item:last-of-type {
+     border-bottom: none;
+  }
+  
+  .detail-item strong {
+    color: #555;
+    margin-right: 10px;
+    min-width: 100px; /* Align values somewhat */
+    display: inline-block;
+  }
+  
+  .detail-item.price {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #27ae60;
+  }
+  .detail-item.price strong {
+      color: #555; /* Keep label color normal */
+  }
+  
+  /* Score & Must-Haves Specific Styling */
+  .score-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.9em;
+      font-weight: bold;
+      color: #fff;
+  }
+  .score-badge.high { background-color: #2ecc71; }
+  .score-badge.medium { background-color: #f39c12; }
+  .score-badge.low { background-color: #e74c3c; }
+  
+  .must-haves-display span {
+      font-weight: bold;
+  }
+  .must-haves-display span.met { color: #27ae60; }
+  .must-haves-display span.not-met { color: #c0392b; }
+  .must-haves-display i { margin-right: 5px; }
+  
+  /* Notes Section */
+  .detail-notes {
+    margin-top: 25px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .detail-notes h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 1.2em;
+  }
+  
+  .detail-notes p {
+    margin-bottom: 0;
+    color: #495057;
+    line-height: 1.6;
+  }
+  .detail-notes p i { /* Italicize placeholder text */
+      color: #6c757d;
+  }
+  
+  /* Action Buttons */
+  .detail-actions {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 15px;
+  }
+  
+  /* Add specific styles if needed for danger button */
+  .btn-danger {
+    background-color: #e74c3c;
+    color: white;
+  }
+  .btn-danger:hover {
+    background-color: #c0392b;
+  }
+  .btn-danger i, .btn-primary i {
+      margin-right: 6px;
+  }
+  
+  
+  /* Loading/Error Messages */
+  .loading-message,
+  .error-message {
+    text-align: center;
+    padding: 50px;
+    color: #6c757d;
+  }
+  .error-message h2 {
+      color: #c0392b;
+      margin-bottom: 15px;
+  }
+  
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .detail-grid {
+      grid-template-columns: 1fr; /* Stack columns */
+      gap: 20px;
+    }
+    .detail-image-section {
+      align-items: center; /* Center image when stacked */
+    }
+    .detail-image, .detail-image-placeholder {
+        max-width: 100%; /* Allow image to take full width */
+    }
+    .property-detail-container h1 {
+        font-size: 1.8em;
+    }
+    .detail-actions {
+        flex-direction: column; /* Stack buttons */
+    }
+    .detail-actions .btn {
+        width: 100%; /* Make buttons full width */
+    }
+  }
+
+  .detail-section.criteria-rating-section {
+    margin-top: 40px;
+    padding-top: 25px;
+    border-top: 1px solid #ddd;
+  }
+  
+  .criteria-rating-section h2 {
+    margin-bottom: 25px;
+    text-align: center;
+    color: #34495e;
+  }
+  
+  .rating-category {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #fdfdfd;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  
+  .rating-category h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #34495e;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 10px;
+    font-size: 1.3em;
+  }
+  
+  .rating-category h3 i {
+    margin-right: 10px;
+    /* Use colors defined previously */
+  }
+  .rating-category:nth-of-type(1) h3 i { color: #f1c40f; } /* Must-Have */
+  .rating-category:nth-of-type(2) h3 i { color: #2ecc71; } /* Nice-to-Have */
+  .rating-category:nth-of-type(3) h3 i { color: #e74c3c; } /* Deal Breaker */
+  
+  
+  .rating-category p i { /* Placeholder text style */
+      color: #7f8c8d;
+  }
+  
+  /* Rating Input General */
+  .rating-input {
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #eee;
+  }
+  .rating-input:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  /* Checkbox Rating Specific */
+  .checkbox-rating {
+    display: flex;
+    align-items: center;
+  }
+  
+  .checkbox-rating input[type="checkbox"] {
+    margin-right: 12px;
+    width: 18px; /* Custom size */
+    height: 18px;
+    cursor: pointer;
+  }
+  /* Custom checkbox appearance (optional) */
+  .checkbox-rating input[type="checkbox"] {
+      accent-color: #3498db; /* Modern browsers */
+  }
+  
+  
+  .checkbox-rating label {
+    cursor: pointer;
+    flex-grow: 1;
+  }
+  
+  /* Star Rating Specific */
+  .star-rating {
+      display: flex;
+      flex-direction: column; /* Label above stars */
+      gap: 8px;
+  }
+  .star-rating label {
+      font-weight: 500;
+  }
+  .star-rating .weight-label {
+      font-size: 0.85em;
+      color: #7f8c8d;
+      font-weight: normal;
+      margin-left: 5px;
+  }
+  
+  .star-rating .stars {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 1.5em; /* Adjust star size */
+    color: #bdc3c7; /* Default color for unrated stars */
+  }
+  
+  .star-rating .stars i {
+    cursor: pointer;
+    transition: color 0.2s, transform 0.1s;
+  }
+  .star-rating .stars i:hover {
+      color: #f39c12; /* Hover color */
+      transform: scale(1.1);
+  }
+  
+  .star-rating .stars i.rated {
+    color: #f1c40f; /* Color for rated stars */
+  }
+  
+  .star-rating .clear-rating {
+      background: none;
+      border: none;
+      color: #bdc3c7;
+      font-size: 0.8em; /* Smaller clear button */
+      margin-left: 10px;
+      cursor: pointer;
+      padding: 5px;
+      opacity: 0.7;
+      transition: color 0.2s, opacity 0.2s;
+  }
+  .star-rating .clear-rating:hover {
+      color: #e74c3c;
+      opacity: 1;
+  }
+
+  /* Style for Yes/No Checkbox specifically for Nice-to-Haves if needed */
+.rating-input.nice-to-have-yesno {
+  /* Add specific styles if different from mustHave/dealBreaker checkboxes */
+  /* e.g., different spacing or label treatment */
+}
+.rating-input.checkbox-rating.nice-to-have-yesno label {
+  display: flex; /* Align label and weight better */
+  justify-content: space-between;
+  align-items: center;
+  width: 100%; /* Ensure label takes full width */
+}
+.rating-input.checkbox-rating.nice-to-have-yesno label .weight-label {
+   margin-left: 10px; /* Space before weight */
+   font-size: 0.85em;
+   color: #7f8c8d;
+   font-weight: normal;
+   white-space: nowrap;
+}
+
+
+/* Styles for Scale 1-10 Number Input */
+.rating-input.scale10-rating {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Push input to the right */
+  gap: 15px; /* Space between label and input */
+}
+.rating-input.scale10-rating label {
+  flex-grow: 1; /* Allow label to take space */
+  font-weight: 500;
+}
+.rating-input.scale10-rating label .weight-label {
+  font-size: 0.85em; color: #7f8c8d; font-weight: normal; margin-left: 5px;
+}
+.rating-input.scale10-rating input[type="number"] {
+  width: 70px; /* Fixed width for number input */
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 1em;
+  /* Remove spinner arrows (optional, browser-specific) */
+  -moz-appearance: textfield;
+}
+.rating-input.scale10-rating input[type="number"]::-webkit-outer-spin-button,
+.rating-input.scale10-rating input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.rating-input.scale10-rating input[type="number"]:focus {
+   outline: none;
+   border-color: #3498db;
+   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* --- UPDATED Styles for Image Section --- */
+.detail-image-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Space between elements */
+}
+.detail-image-section h4 {
+    margin-bottom: 0px; /* Less margin below heading */
+    color: #495057;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+/* Image Gallery Styles */
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Responsive grid */
+    gap: 10px;
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 6px;
+    background-color: #fdfdff;
+    max-height: 400px; /* Limit height and allow scrolling if needed */
+    overflow-y: auto;
+}
+.gallery-item {
+    position: relative; /* For potential delete button later */
+    aspect-ratio: 1 / 1; /* Make gallery items square */
+    background-color: #f0f0f0; /* Placeholder background */
+    border-radius: 4px;
+    overflow: hidden; /* Clip image */
+}
+.gallery-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover the square area */
+    transition: transform 0.2s ease-in-out;
+}
+.gallery-item a:hover img {
+    transform: scale(1.05);
+}
+
+/* Placeholder when no images */
+.detail-image-placeholder {
+  width: 100%;
+  min-height: 150px; /* Ensure some height */
+  aspect-ratio: 16 / 9; /* Or desired aspect ratio */
+  background-color: #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #adb5bd;
+  border: 1px solid #dee2e6;
+  text-align: center;
+}
+.detail-image-placeholder i { font-size: 2.5em; margin-bottom: 10px; }
+.detail-image-placeholder span { font-size: 0.9em; }
+
+
+/* Add Images Form Styles */
+.add-images-form {
+    margin-top: 15px;
+    border-top: 1px dashed #eee;
+    padding-top: 15px;
+}
+.add-images-form h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 1em;
+}
+.add-images-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.85em;
+    line-height: 1.4;
+    margin-bottom: 10px;
+    resize: vertical;
+    min-height: 60px;
+}
+.add-images-form textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+.btn-add-images {
+    font-size: 0.9em;
+    width: 100%; /* Make button full width */
+    padding: 8px 12px;
+}
+.btn-add-images i {
+    margin-right: 6px;
+}
+
+/* Ensure listing link is below add form */
+.listing-link {
+  display: block; /* Ensure it takes full width */
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* Adjust grid layout if needed */
+@media (min-width: 768px) {
+  .detail-grid {
+    /* Maybe slightly adjust column ratio if image section is taller now */
+    /* grid-template-columns: 1fr 1.5fr; */
+  }
+}

@@ -1,0 +1,111 @@
+/* src/components/ScoreBreakdown.css */
+.score-breakdown {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 20px;
+    margin-top: 30px; /* Space above the breakdown */
+    font-size: 0.9em;
+    line-height: 1.6;
+  }
+  
+  .score-breakdown h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+  }
+  
+  .breakdown-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #e0e0e0;
+  }
+  .breakdown-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  
+  .breakdown-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #343a40;
+    font-size: 1.1em;
+  }
+  
+  .breakdown-section .status-pass {
+    color: #28a745; /* Green for pass */
+    font-weight: 500;
+  }
+  .breakdown-section .status-fail {
+    color: #dc3545; /* Red for fail */
+    font-weight: 500;
+  }
+  .breakdown-section .status-pass i,
+  .breakdown-section .status-fail i {
+    margin-right: 8px;
+    font-size: 1.1em;
+    vertical-align: middle;
+  }
+  .breakdown-section .status-fail p {
+      margin-bottom: 5px; /* Space before list if present */
+  }
+  .breakdown-section .status-fail ul {
+      margin-top: 5px;
+      margin-bottom: 0;
+      padding-left: 25px;
+      font-weight: normal; /* Normal weight for list items */
+      color: #495057; /* Standard text color for details */
+  }
+  .breakdown-section .status-fail li {
+      margin-bottom: 3px;
+  }
+  
+  
+  /* Nice-to-Have Details */
+  .breakdown-section.nice-to-haves p {
+      margin-bottom: 10px;
+      color: #495057;
+  }
+  .breakdown-section.nice-to-haves p strong {
+      color: #212529;
+  }
+  
+  .nth-details-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      color: #495057;
+  }
+  .nth-details-list li {
+      margin-bottom: 6px;
+      padding: 4px 0;
+      display: flex; /* Use flex for alignment */
+      flex-wrap: wrap; /* Allow wrapping */
+      gap: 8px; /* Space between elements */
+      border-bottom: 1px dotted #eee; /* Light separator */
+  }
+  .nth-details-list li:last-child {
+      border-bottom: none;
+  }
+  
+  .nth-details-list .nth-text {
+      flex-grow: 1; /* Text takes available space */
+      min-width: 150px; /* Prevent getting too squished */
+  }
+  .nth-details-list .nth-rating,
+  .nth-details-list .nth-weight,
+  .nth-details-list .nth-points {
+      font-size: 0.9em;
+      color: #6c757d;
+      white-space: nowrap; /* Prevent wrapping */
+      flex-shrink: 0; /* Don't shrink these details */
+  }
+  .nth-details-list .nth-points {
+      font-weight: 500;
+      color: #495057;
+      margin-left: auto; /* Push points to the right */
+  }

@@ -1,0 +1,99 @@
+/* src/pages/Dashboard.css */
+
+.dashboard-container {
+  height: 100%;
+}
+
+/* Updated Header Styles */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+  gap: 15px; /* Space between title and controls */
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #2c3e50;
+  flex-shrink: 0; /* Prevent title from shrinking too much */
+}
+
+/* Container for filter/sort controls */
+.dashboard-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Space between controls */
+    flex-wrap: wrap; /* Allow controls to wrap */
+    margin-left: auto; /* Push controls to the right side */
+}
+
+/* Filter Input */
+.filter-input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+    min-width: 200px; /* Minimum width */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filter-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Sort Select Dropdown */
+.sort-select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 0.9em;
+    cursor: pointer;
+    height: 36px; /* Match input height approx */
+}
+.sort-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+/* Settings Icon (already styled globally potentially, adjust if needed) */
+.settings-icon {
+  cursor: pointer;
+  font-size: 1.5em;
+  color: #7f8c8d;
+  transition: color 0.2s;
+}
+.settings-icon:hover {
+   color: #34495e;
+}
+
+
+/* Property List & No Properties Message */
+.property-list {
+  /* Add styles if needed for layout, e.g., grid */
+}
+
+.no-properties-message {
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 1.1em;
+  margin-top: 50px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #dfe4e7;
+}
+
+/* Property Card Wrapper (Optional, if needed for spacing/layout) */
+.property-card-wrapper {
+    /* margin-bottom: 10px; */ /* Example */
+}
+
+/* Ensure FAB doesn't overlap controls too much on wrap */
+/* May need media queries for better fine-tuning */
