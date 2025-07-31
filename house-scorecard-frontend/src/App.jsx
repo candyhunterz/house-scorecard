@@ -1,6 +1,6 @@
 // src/App.jsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // Import router components
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Compare from './pages/Compare';
@@ -8,46 +8,35 @@ import Criteria from './pages/Criteria';
 import MapPage from './pages/MapPage';
 import PropertyDetail from './pages/PropertyDetail';
 import AddProperty from './pages/AddProperty';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+
+function PrivateRoute({ children }) {
+  const isAuthenticated = localStorage.getItem('accessToken');
+  return isAuthenticated ? children : <Navigate to="/login" />;
+}
 
 function App() {
   return (
-    // Wrap the entire application in BrowserRouter
     <BrowserRouter>
       <div className="app-layout">
         <Sidebar />
         <main className="main-content-area">
-          {/* Define the routes */}
           <Routes>
-            {/* Default route redirects to /properties */}
-            <Route path="/" element={<Navigate replace to="/properties" />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
 
-            {/* Dashboard / Properties List */}
-            <Route path="/properties" element={<Dashboard />} />
+            {/* Protected Routes */}
+            <Route path="/" element={<PrivateRoute><Navigate replace to="/properties" /></PrivateRoute>} />
+            <Route path="/properties" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/properties/:propertyId" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
+            <Route path="/add-property" element={<PrivateRoute><AddProperty /></PrivateRoute>} />
+            <Route path="/compare" element={<PrivateRoute><Compare /></PrivateRoute>} />
+            <Route path="/criteria" element={<PrivateRoute><Criteria /></PrivateRoute>} />
+            <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
 
-            {/* View/Edit details of a specific property */}
-            {/* The ':propertyId' is a URL parameter */}
-            <Route path="/properties/:propertyId" element={<PropertyDetail />} />
-
-            {/* Add New Property Form */}
-            <Route path="/add-property" element={<AddProperty />} />
-
-            {/* Comparison Page */}
-            <Route path="/compare" element={<Compare />} />
-
-            {/* Criteria Management Page */}
-            <Route path="/criteria" element={<Criteria />} />
-
-            {/* Map View Page */}
-            <Route path="/map" element={<MapPage />} />
-
-            {/* Add a catch-all for unknown routes (optional) */}
             <Route path="*" element={<div><h2>404 Not Found</h2><p>Sorry, this page doesn't exist.</p></div>} />
           </Routes>
-
-          {/* FAB can remain here if it's global, or moved into specific pages */}
-          {/* We'll make it navigate later */}
-           {/* <button className="fab" title="Add New Property">+</button>  */}
-           {/* Moved FAB handling to Dashboard for now, can be adjusted */}
         </main>
       </div>
     </BrowserRouter>

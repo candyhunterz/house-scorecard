@@ -107,7 +107,7 @@ function AddProperty() {
       <h1>Add New Property</h1>
       <p className="add-property-description">Enter the details of a property you visited.</p>
 
-      <form onSubmit={handleSubmit} className="add-property-form">
+      <form onSubmit={handleSubmit} className="add-property-form" action="">
 
         {/* Address Input (Required) */}
         <div className="form-group">

@@ -1,5 +1,5 @@
 // src/contexts/CriteriaContext.jsx
-import React, { createContext, useState, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useState, useContext, useMemo, useCallback, useEffect } from 'react';
 
 // Define allowed rating types as constants for better maintainability
 export const RATING_TYPE_STARS = 'stars';
@@ -7,24 +7,9 @@ export const RATING_TYPE_YES_NO = 'yesNo';
 export const RATING_TYPE_SCALE_10 = 'scale10';
 export const RATING_TYPES = [RATING_TYPE_STARS, RATING_TYPE_YES_NO, RATING_TYPE_SCALE_10];
 
-// --- Initial Mock/Default Criteria ---
-// Structure: { id: number, text: string, type: 'mustHave'|'niceToHave'|'dealBreaker', weight?: number, category?: string | null, ratingType?: 'stars'|'yesNo'|'scale10' }
-const initialCriteria = [
-  // Must Haves (no ratingType needed)
-  { id: 101, text: 'Minimum 3 Bedrooms', type: 'mustHave', category: 'Interior Features' },
-  { id: 102, text: 'Within Specific School District', type: 'mustHave', category: 'Location' },
-  { id: 103, text: 'Budget Under $500k', type: 'mustHave', category: 'Financial' },
-  // Nice to Haves (Add ratingType)
-  { id: 201, text: 'Updated Kitchen', type: 'niceToHave', weight: 8, category: 'Interior Features', ratingType: RATING_TYPE_STARS }, // Default: Stars 1-5
-  { id: 202, text: 'Fenced Yard', type: 'niceToHave', weight: 7, category: 'Exterior', ratingType: RATING_TYPE_YES_NO }, // Example Yes/No
-  { id: 203, text: 'Two-Car Garage', type: 'niceToHave', weight: 5, category: 'Exterior', ratingType: RATING_TYPE_YES_NO },
-  { id: 204, text: 'Basement Condition (Scale 1-10)', type: 'niceToHave', weight: 4, category: 'Condition/Maintenance', ratingType: RATING_TYPE_SCALE_10 }, // Example Scale 1-10
-  { id: 205, text: 'Walkable to Park', type: 'niceToHave', weight: 6, category: 'Location', ratingType: RATING_TYPE_STARS },
-  // Deal Breakers (no ratingType needed)
-  { id: 301, text: 'On a Busy Main Road', type: 'dealBreaker', category: 'Location' },
-  { id: 302, text: 'Evidence of Foundation Issues', type: 'dealBreaker', category: 'Condition/Maintenance' },
-  { id: 303, text: 'Active HOA Restrictions (strict)', type: 'dealBreaker', category: 'Financial' },
-];
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const getApiUrl = (path) => `${API_BASE_URL}${path}`;
 
 // 1. Create the Context
 const CriteriaContext = createContext();
@@ -32,12 +17,36 @@ const CriteriaContext = createContext();
 // 2. Create a Provider Component
 export function CriteriaProvider({ children }) {
   // State holding the array of all criteria objects
-  const [criteria, setCriteria] = useState(initialCriteria);
+  const [criteria, setCriteria] = useState([]);
+
+  const getAuthHeaders = useCallback(() => {
+    const token = localStorage.getItem('accessToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  }, []);
+
+  useEffect(() => {
+    const fetchCriteria = async () => {
+      try {
+        const response = await fetch(getApiUrl('/criteria/'), {
+          headers: getAuthHeaders(),
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        setCriteria(data);
+      } catch (error) {
+        console.error('Failed to fetch criteria:', error);
+      }
+    };
+
+    fetchCriteria();
+  }, [getAuthHeaders]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 
   /** Adds a new criterion object to the state */
-  const addCriterion = useCallback((newCriterion) => {
+  const addCriterion = useCallback(async (newCriterion) => {
     console.log("CONTEXT: addCriterion called with:", newCriterion);
 
     // --- Input Validation ---
@@ -74,8 +83,7 @@ export function CriteriaProvider({ children }) {
     // --- End Validation ---
 
     // Create the final criterion object to be added
-    const criterionWithId = {
-      id: Date.now(), // Simple unique ID
+    const criterionToAdd = {
       text: trimmedText,
       type: newCriterion.type,
       category: newCriterion.category?.trim() || null, // Use null if category is empty/whitespace
@@ -84,20 +92,45 @@ export function CriteriaProvider({ children }) {
       ratingType: newCriterion.type === 'niceToHave' ? criterionRatingType : undefined,
     };
 
-    console.log("CONTEXT: Adding criterion:", criterionWithId);
-    // Update state using the functional form
-    setCriteria(prevCriteria => [...prevCriteria, criterionWithId]);
+    try {
+      const response = await fetch(getApiUrl('/criteria/'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(criterionToAdd),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const savedCriterion = await response.json();
+      setCriteria(prevCriteria => [...prevCriteria, savedCriterion]);
+    } catch (error) {
+      console.error('Failed to add criterion:', error);
+    }
 
   }, []); // Depends only on setCriteria (stable)
 
   /** Deletes a criterion from the state by its ID */
-  const deleteCriterion = useCallback((id) => {
+  const deleteCriterion = useCallback(async (id) => {
     console.log(`CONTEXT: deleteCriterion called for ID: ${id}`);
-    setCriteria(prevCriteria => prevCriteria.filter(c => c.id !== id));
+    try {
+      const response = await fetch(getApiUrl(`/criteria/${id}/`), {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      setCriteria(prevCriteria => prevCriteria.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Failed to delete criterion:', error);
+    }
   }, []); // Depends only on setCriteria
 
   /** Updates an existing criterion in the state */
-  const updateCriterion = useCallback((id, updatedData) => {
+  const updateCriterion = useCallback(async (id, updatedData) => {
      console.log(`CONTEXT: updateCriterion called for ID: ${id}`, updatedData);
 
      // --- Input Validation for Update ---
@@ -143,37 +176,30 @@ export function CriteriaProvider({ children }) {
      }
      // --- End Validation ---
 
+     const criterionToUpdate = criteria.find(c => c.id === id);
+     if (!criterionToUpdate) return;
 
-     // Update state using functional form and map
-     setCriteria(prevCriteria => prevCriteria.map(c => {
-       if (c.id === id) {
-         // Create the potential updated criterion object
-         const potentialUpdate = {
-             ...c, // Start with existing data
-             ...updatedData, // Apply validated changes (text, weight, category, ratingType)
+     const updatedCriterion = { ...criterionToUpdate, ...updatedData };
 
-             // Re-apply weight and ratingType logic strictly based on ORIGINAL type 'c.type'
-             // This prevents weight/ratingType being added if the type were somehow changed away from 'niceToHave'
-             weight: c.type === 'niceToHave'
-                ? (validatedWeight !== undefined ? validatedWeight : c.weight) // Use validated weight if provided, else keep original
-                : undefined, // Ensure weight is undefined if not a niceToHave type
-             ratingType: c.type === 'niceToHave'
-                ? (validatedRatingType !== undefined ? validatedRatingType : c.ratingType) // Use validated type if provided, else keep original
-                : undefined // Ensure ratingType is undefined if not a niceToHave type
-         };
-
-         // Optimization: Only return a new object reference if data actually changed
-         if (JSON.stringify(c) !== JSON.stringify(potentialUpdate)) {
-             console.log(`CONTEXT: Updating criterion ${id} in state.`);
-             return potentialUpdate;
-         } else {
-             console.log(`CONTEXT: Criterion ${id} data unchanged. Skipping state update.`);
-             return c;
-         }
-       }
-       return c; // Return other criteria unchanged
-     }));
-  }, []); // Depends only on setCriteria
+     try {
+      const response = await fetch(getApiUrl(`/criteria/${id}/`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedCriterion),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const savedCriterion = await response.json();
+      setCriteria(prevCriteria =>
+        prevCriteria.map(c => (c.id === savedCriterion.id ? savedCriterion : c))
+      );
+    } catch (error) {
+      console.error('Failed to update criterion:', error);
+    }
+  }, [criteria]); // Depends only on setCriteria
 
 
   // --- Memoize Derived Lists (using useMemo for stable references) ---

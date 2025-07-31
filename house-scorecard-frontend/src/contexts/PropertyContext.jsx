@@ -1,78 +1,9 @@
 // src/contexts/PropertyContext.jsx
-import React, { createContext, useState, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useContext, useCallback, useMemo, useEffect } from 'react';
 
-// Define initial data with 'imageUrls' as an array
-const initialPropertiesData = [
-    {
-        id: 1,
-        address: '123 Main St, Anytown',
-        listingUrl: 'https://www.example.com/listing/123',
-        price: 450000,
-        beds: 3,
-        baths: 2,
-        sqft: 1800,
-        imageUrls: [ // Array of image URLs
-            'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=400',
-            'https://images.pexels.com/photos/164558/pexels-photo-164558.jpeg?auto=compress&cs=tinysrgb&w=400'
-        ],
-        notes: 'Nice curb appeal, kitchen needs update.',
-        latitude: 40.7128,
-        longitude: -74.0060,
-        ratings: {}, // Placeholder for ratings object
-        score: null,   // Placeholder for calculated score
-    },
-    {
-        id: 2,
-        address: '456 Oak Ave, Anytown',
-        listingUrl: 'https://www.example.com/listing/456',
-        price: 510000,
-        beds: 4,
-        baths: 2.5,
-        sqft: 2100,
-        imageUrls: [ // Single image example
-            'https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg?auto=compress&cs=tinysrgb&w=400'
-        ],
-        notes: 'Great layout, but backs onto busy road.',
-        latitude: 40.7580,
-        longitude: -73.9855,
-        ratings: {},
-        score: null,
-    },
-      {
-        id: 3,
-        address: '789 Pine Ln, Sometown',
-        listingUrl: null,
-        price: 485000,
-        beds: 3,
-        baths: 2,
-        sqft: 1950,
-        imageUrls: [], // Example with no images initially
-        notes: '',
-        latitude: 34.0522,
-        longitude: -118.2437,
-        ratings: {},
-        score: null,
-    },
-     {
-        id: 4,
-        address: '101 Maple Dr, Villagetown',
-        listingUrl: null,
-        price: 420000,
-        beds: 2,
-        baths: 1.5,
-        sqft: 1450,
-        imageUrls: [ // Multiple images example
-            'https://images.pexels.com/photos/209315/pexels-photo-209315.jpeg?auto=compress&cs=tinysrgb&w=400',
-            'https://images.pexels.com/photos/271816/pexels-photo-271816.jpeg?auto=compress&cs=tinysrgb&w=400',
-            'https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg?auto=compress&cs=tinysrgb&w=400'
-            ],
-        notes: 'Small but cozy, potential for expansion.',
-        latitude: 34.0722,
-        longitude: -118.2537,
-        ratings: {},
-        score: null,
-    },
-];
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const getApiUrl = (path) => `${API_BASE_URL}${path}`;
 
 // 1. Create the Context
 const PropertyContext = createContext();
@@ -80,12 +11,36 @@ const PropertyContext = createContext();
 // 2. Create a Provider Component
 export function PropertyProvider({ children }) {
   // State holding the array of all property objects
-  const [properties, setProperties] = useState(initialPropertiesData);
+  const [properties, setProperties] = useState([]);
+
+    const getAuthHeaders = useCallback(() => {
+      const token = localStorage.getItem('accessToken');
+      return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }, []);
+
+    useEffect(() => {
+      const fetchProperties = async () => {
+        try {
+          const response = await await fetch(getApiUrl('/properties/'), {
+            headers: getAuthHeaders(),
+          });
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          const data = await response.json();
+          setProperties(data);
+        } catch (error) {
+          console.error('Failed to fetch properties:', error);
+        }
+      };
+
+      fetchProperties();
+    }, [getAuthHeaders]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 
   /** Adds a new property, parsing the image URLs string into an array */
-  const addProperty = useCallback((newPropertyData) => {
+  const addProperty = useCallback(async (newPropertyData) => {
     console.log("CONTEXT: addProperty called with raw data:", newPropertyData);
 
     // --- Parse imageUrlsString into an array ---
@@ -122,9 +77,23 @@ export function PropertyProvider({ children }) {
         score: null
     };
 
-    console.log("CONTEXT: Adding property object:", propertyWithId);
-    // Update state using functional form
-    setProperties(prevProperties => [...prevProperties, propertyWithId]);
+    try {
+      const response = await fetch(getApiUrl('/properties/'), {
+        method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(propertyWithId),
+        });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const savedProperty = await response.json();
+      setProperties(prevProperties => [...prevProperties, savedProperty]);
+    } catch (error) {
+      console.error('Failed to add property:', error);
+    }
   }, []); // Depends only on setProperties (stable)
 
   /** Retrieves a property by its ID */
@@ -136,44 +105,69 @@ export function PropertyProvider({ children }) {
   }, [properties]); // Re-memoize only if the 'properties' array reference changes
 
   /** Updates the ratings and calculated score for a specific property */
-  const updatePropertyRatingsAndScore = useCallback((propertyId, newRatings, newScore) => {
+  const updatePropertyRatingsAndScore = useCallback(async (propertyId, newRatings, newScore) => {
     console.log(`CONTEXT: updatePropertyRatingsAndScore called for ID: ${propertyId}`);
-    setProperties(prevProperties =>
-      prevProperties.map(prop => {
-        if (prop.id === parseInt(propertyId, 10)) {
-            // Optimization: Only create new object if data actually changed
-            if (prop.ratings !== newRatings || prop.score !== newScore) {
-                console.log(`CONTEXT: Updating ratings/score state for ${propertyId}. New Score: ${newScore}`);
-                return { ...prop, ratings: newRatings, score: newScore };
-            }
-        }
-        return prop; // Return unchanged property
-      })
-    );
-  }, []); // Depends only on setProperties
+    
+    const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
+    if (!propertyToUpdate) return;
+
+    const updatedProperty = { ...propertyToUpdate, ratings: newRatings, score: newScore };
+
+    try {
+      const response = await fetch(getApiUrl(`/properties/${propertyId}/`), {
+        method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(updatedProperty),
+        });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const savedProperty = await response.json();
+      setProperties(prevProperties =>
+        prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
+      );
+    } catch (error) {
+      console.error('Failed to update property:', error);
+    }
+  }, [properties]); // Depends only on setProperties
 
   /** Updates only the imageUrls array for a specific property */
-  const updatePropertyImages = useCallback((propertyId, newImageUrlsArray) => {
+  const updatePropertyImages = useCallback(async (propertyId, newImageUrlsArray) => {
       // Basic validation: ensure input is an array
       if (!Array.isArray(newImageUrlsArray)) {
           console.error("CONTEXT Error: updatePropertyImages requires an array. Received:", newImageUrlsArray);
           return;
       }
       console.log(`CONTEXT: updatePropertyImages called for ID: ${propertyId} with ${newImageUrlsArray.length} URLs`);
-      setProperties(prevProperties => prevProperties.map(prop => {
-          if (prop.id === parseInt(propertyId, 10)) {
-              // Optimization: Only update if the array content has actually changed
-              // Simple JSON check works for arrays of strings/primitives
-              if (JSON.stringify(prop.imageUrls) !== JSON.stringify(newImageUrlsArray)) {
-                   console.log(`CONTEXT: Updating images state for ${propertyId}.`);
-                  return { ...prop, imageUrls: newImageUrlsArray };
-              } else {
-                   console.log(`CONTEXT: Images for ${propertyId} unchanged. Skipping state update.`);
-              }
-          }
-          return prop; // Return unchanged property
-      }));
-  }, []); // Depends only on setProperties
+      
+      const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
+      if (!propertyToUpdate) return;
+
+      const updatedProperty = { ...propertyToUpdate, imageUrls: newImageUrlsArray };
+
+      try {
+        const response = await fetch(getApiUrl(`/properties/${propertyId}/`), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(updatedProperty),
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const savedProperty = await response.json();
+        setProperties(prevProperties =>
+          prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
+        );
+      } catch (error) {
+        console.error('Failed to update property images:', error);
+      }
+  }, [properties]); // Depends only on setProperties
 
 
   // --- Memoize the context value object itself ---
