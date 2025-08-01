@@ -17,9 +17,12 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 class PropertySerializer(serializers.ModelSerializer):
+    listingUrl = serializers.URLField(source='listing_url', allow_null=True, required=False)
+
     class Meta:
         model = Property
-        fields = '__all__'
+        fields = ('id', 'address', 'listingUrl', 'price', 'beds', 'baths', 'sqft', 'notes', 'latitude', 'longitude', 'image_urls', 'score', 'created_at', 'updated_at')
+        extra_kwargs = {'listing_url': {'write_only': True}} # Make original field write-only if needed
 
 class CriterionSerializer(serializers.ModelSerializer):
     class Meta:
