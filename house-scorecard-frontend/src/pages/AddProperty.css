@@ -1,28 +1,34 @@
 /* src/pages/AddProperty.css */
+
+/* Mobile-first container */
 .add-property-container {
-    max-width: 700px; /* Limit form width for readability */
-    margin: 0 auto; /* Center the form container */
-    padding: 20px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: var(--space-4);
     background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 0;
+    box-shadow: none;
+    min-height: calc(100vh - var(--mobile-header-height));
   }
   
   .add-property-container h1 {
     text-align: center;
-    margin-bottom: 25px;
-    color: #2c3e50;
+    margin-bottom: var(--space-6);
+    color: var(--secondary-color);
+    font-size: var(--font-2xl);
   }
   
   .add-property-form .form-group {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
   }
   
   .add-property-form label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #555;
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: var(--font-base);
   }
   
   .add-property-form input[type="text"],
@@ -30,115 +36,160 @@
   .add-property-form input[type="url"],
   .add-property-form textarea {
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
+    padding: var(--space-4);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: var(--font-base);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 44px;
+    box-sizing: border-box;
   }
   
   .add-property-form input:focus,
   .add-property-form textarea:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
   }
   
-  /* Style required fields indicator (browser default or custom) */
+  /* Style required fields indicator */
   .add-property-form label:has(+ :required)::after {
     content: " *";
-    color: #e74c3c;
+    color: var(--danger-color);
     font-weight: normal;
-    margin-left: 2px;
+    margin-left: var(--space-1);
   }
   
-  /* Layout for multiple fields in a row */
+  /* Mobile-first: Stack form fields vertically */
   .add-property-form .form-row {
     display: flex;
-    gap: 20px; /* Space between fields */
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: var(--space-5);
   }
   
   .add-property-form .form-row .form-group {
-    flex: 1; /* Each field takes equal space */
-    margin-bottom: 0; /* Remove bottom margin as row has it */
+    flex: 1;
+    margin-bottom: var(--space-5);
   }
   
   /* Style Textarea */
   .add-property-form textarea {
-    resize: vertical; /* Allow vertical resizing */
-    min-height: 80px;
+    resize: vertical;
+    min-height: 100px;
   }
   
-  /* Action Buttons */
+  /* Mobile-first Action Buttons */
   .add-property-form .form-actions {
-    margin-top: 30px;
+    margin-top: var(--space-6);
     display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 15px; /* Space between buttons */
+    flex-direction: column-reverse;
+    gap: var(--space-3);
   }
   
-  /* Basic Button Styling (add to global.css or keep here) */
+  /* Mobile-friendly Button Styling */
   .btn {
-    padding: 10px 20px;
+    padding: var(--space-4) var(--space-5);
     border: none;
-    border-radius: 4px;
-    font-size: 1rem;
+    border-radius: 8px;
+    font-size: var(--font-base);
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s, box-shadow 0.2s;
-    font-weight: 500;
+    transition: all 0.2s ease;
+    min-height: 52px;
+    width: 100%;
   }
   
   .btn-primary {
-    background-color: #3498db;
+    background-color: var(--primary-color);
     color: white;
   }
   
   .btn-primary:hover {
     background-color: #2980b9;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(0);
   }
   
   .btn-secondary {
     background-color: #ecf0f1;
-    color: #34495e;
-    border: 1px solid #bdc3c7;
+    color: var(--secondary-color);
+    border: 1px solid var(--border-color);
   }
   
   .btn-secondary:hover {
     background-color: #dfe4e7;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
   
-  /* Responsive adjustments (optional) */
-  @media (max-width: 600px) {
-    .add-property-form .form-row {
-      flex-direction: column; /* Stack fields vertically on small screens */
-      gap: 0;
-    }
-     .add-property-form .form-row .form-group {
-       margin-bottom: 20px; /* Add margin back when stacked */
-     }
-     .add-property-form .form-actions {
-       flex-direction: column-reverse; /* Stack buttons, primary on bottom */
-       gap: 10px;
-     }
-      .add-property-form .form-actions .btn {
-        width: 100%; /* Make buttons full width */
-      }
+  .btn-secondary:active {
+    transform: translateY(0);
   }
+  
+/* Tablet responsive improvements */
+@media (min-width: 768px) {
+  .add-property-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: var(--space-8);
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    min-height: auto;
+  }
+  
+  .add-property-container h1 {
+    font-size: var(--font-3xl);
+    margin-bottom: var(--space-8);
+  }
+  
+  /* Horizontal layout for form rows on tablet+ */
+  .add-property-form .form-row {
+    flex-direction: row;
+    gap: var(--space-5);
+  }
+  
+  .add-property-form .form-row .form-group {
+    margin-bottom: 0;
+  }
+  
+  .add-property-form .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: var(--space-4);
+  }
+  
+  .btn {
+    width: auto;
+    min-width: 120px;
+  }
+}
 
-  /* Style the textarea for image URLs */
+@media (min-width: 1024px) {
+  .add-property-container {
+    max-width: 800px;
+    padding: var(--space-10);
+  }
+}
+
+/* Style the textarea for image URLs */
 .add-property-form textarea#imageUrlsString {
   resize: vertical;
-  min-height: 80px;
-  font-family: monospace; /* Good for URLs */
-  font-size: 0.9em;
+  min-height: 100px;
+  font-family: monospace;
+  font-size: var(--font-sm);
 }
 
 /* Style the help text */
 .add-property-form .form-group small {
   display: block;
-  margin-top: 5px;
-  font-size: 0.8em;
-  color: #6c757d;
+  margin-top: var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
 }

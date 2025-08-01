@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PropertyProvider } from './contexts/PropertyContext';
@@ -22,10 +22,101 @@ function PrivateRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading...
+      </div>
+    );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+function AppLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+
+  return (
+    <div className="app-layout">
+      {/* Mobile Header */}
+      <header className="mobile-header">
+        <h1>House Scorecard</h1>
+        <button className="mobile-menu-toggle" onClick={toggleSidebar}>
+          <i className="fas fa-bars"></i>
+        </button>
+      </header>
+
+      {/* Sidebar Overlay for mobile */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
+        onClick={closeSidebar}
+      ></div>
+
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+
+      {/* Main Content */}
+      <main className="main-content-area">
+        <Routes>
+          {/* Protected Routes */}
+          <Route path="/" element={<Navigate replace to="/properties" />} />
+          <Route path="/properties" element={<Dashboard />} />
+          <Route path="/properties/:propertyId" element={<PropertyDetail />} />
+          <Route path="/edit-property/:propertyId" element={<EditProperty />} />
+          <Route path="/add-property" element={<AddProperty />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/criteria" element={<Criteria />} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<div><h2>404 Not Found</h2><p>Sorry, this page doesn't exist.</p></div>} />
+        </Routes>
+      </main>
+      <ToastContainer />
+    </div>
+  );
 }
 
 function App() {
@@ -35,29 +126,7 @@ function App() {
         <ToastProvider>
           <PropertyProvider>
             <CriteriaProvider>
-              <div className="app-layout">
-                <Sidebar />
-                <main className="main-content-area">
-                  <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-
-                    {/* Protected Routes */}
-                    <Route path="/" element={<PrivateRoute><Navigate replace to="/properties" /></PrivateRoute>} />
-                    <Route path="/properties" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                    <Route path="/properties/:propertyId" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
-                    <Route path="/edit-property/:propertyId" element={<PrivateRoute><EditProperty /></PrivateRoute>} />
-                    <Route path="/add-property" element={<PrivateRoute><AddProperty /></PrivateRoute>} />
-                    <Route path="/compare" element={<PrivateRoute><Compare /></PrivateRoute>} />
-                    <Route path="/criteria" element={<PrivateRoute><Criteria /></PrivateRoute>} />
-                    <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
-                    <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-
-                    <Route path="*" element={<div><h2>404 Not Found</h2><p>Sorry, this page doesn't exist.</p></div>} />
-                  </Routes>
-                </main>
-                <ToastContainer />
-              </div>
+              <AppLayout />
             </CriteriaProvider>
           </PropertyProvider>
         </ToastProvider>

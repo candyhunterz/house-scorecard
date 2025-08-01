@@ -13,16 +13,35 @@ export function AuthProvider({ children }) {
 
   // Check if user is authenticated on app load
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const storedUsername = localStorage.getItem('username');
-    
-    if (token) {
-      setIsAuthenticated(true);
-      if (storedUsername) {
-        setUser({ username: storedUsername });
+    const checkAuth = async () => {
+      const token = localStorage.getItem('accessToken');
+      const storedUsername = localStorage.getItem('username');
+      
+      
+      if (token) {
+        // Optionally validate token with server
+        try {
+          setIsAuthenticated(true);
+          if (storedUsername) {
+            setUser({ username: storedUsername });
+          }
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          // Clear invalid tokens
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('username');
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } else {
+        setIsAuthenticated(false);
       }
-    }
-    setIsLoading(false);
+      
+      setIsLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   // Login function

@@ -7,7 +7,7 @@ import './Settings.css';
 
 function Settings() {
     const { user, logout } = useAuth();
-    const { showSuccess, showError, showWarning } = useToast();
+    const { showSuccess, showError } = useToast();
     const { showConfirm, confirmDialog } = useConfirm();
     
     // Profile settings state

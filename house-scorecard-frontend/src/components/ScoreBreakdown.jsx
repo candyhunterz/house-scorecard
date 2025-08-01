@@ -13,7 +13,7 @@ const displayRawRating = (ratingValue, ratingType) => {
     }
 };
 
-function ScoreBreakdown({ ratings, mustHaves, niceToHaves, dealBreakers, finalScore }) {
+function ScoreBreakdown({ ratings, mustHaves, niceToHaves, dealBreakers }) {
     const currentRatings = ratings || {};
     const MAX_NORMALIZED_RATING = 5; // Consistent scale used in calculation
 

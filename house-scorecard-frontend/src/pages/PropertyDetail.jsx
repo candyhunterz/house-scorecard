@@ -1,5 +1,5 @@
 // src/pages/PropertyDetail.jsx
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 // Make sure updatePropertyImages is imported from context
 import { useProperties } from '../contexts/PropertyContext';
@@ -44,7 +44,7 @@ function RatingInput({ criterion, rating, onChange }) {
                     <input type="checkbox" id={`rating-${criterion.id}`} checked={!!rating} onChange={handleCheckboxChange}/>
                     <label htmlFor={`rating-${criterion.id}`}>{criterion.text}</label>
                 </div>);
-        case 'niceToHave':
+        case 'niceToHave': {
             const ratingType = criterion.ratingType || RATING_TYPE_STARS;
             switch (ratingType) {
                 case RATING_TYPE_YES_NO:
@@ -69,6 +69,7 @@ function RatingInput({ criterion, rating, onChange }) {
                             </div>
                         </div>);
             }
+        }
         default: return null;
     }
 } // End RatingInput Component
@@ -150,12 +151,36 @@ function PropertyDetail() {
             // Set initial score display (prefer saved, else calculate)
             const initialScore = fetchedProperty.score ?? calculateScore(initialRatings, mustHaves, niceToHaves, dealBreakers);
             setCalculatedScore(initialScore);
+            setLoading(false); // Property found - stop loading
         } else {
-             console.error(`EFFECT 1 (Load): Property with ID ${propertyId} not found.`);
+            console.log(`EFFECT 1 (Load): Property with ID ${propertyId} not found in context yet.`);
+            // Don't set loading to false yet - PropertyContext might still be fetching
+            // We'll handle this in the properties dependency effect below
         }
-        setLoading(false); // Loading finished
     }, [propertyId]); // Only depend on propertyId changes
 
+    // Effect 1.5: Handle case where PropertyContext loads properties after PropertyDetail mounts
+    useEffect(() => {
+        // Only run if we're currently loading and don't have a property yet
+        if (loading && !property && propertyId && properties.length > 0) {
+            console.log(`EFFECT 1.5: Properties loaded, checking for propertyId: ${propertyId}`);
+            const fetchedProperty = getPropertyById(propertyId);
+            if (fetchedProperty) {
+                console.log(`EFFECT 1.5: Found property ${propertyId} after context loaded`);
+                setProperty(fetchedProperty);
+                const initialRatings = fetchedProperty.ratings || {};
+                setRatings(initialRatings);
+                setPrevRatings(initialRatings);
+                setInitialRatingsLoaded(true);
+                const initialScore = fetchedProperty.score ?? calculateScore(initialRatings, mustHaves, niceToHaves, dealBreakers);
+                setCalculatedScore(initialScore);
+                setLoading(false);
+            } else {
+                console.log(`EFFECT 1.5: Property ${propertyId} still not found after context loaded - showing error`);
+                setLoading(false); // Stop loading and show error
+            }
+        }
+    }, [properties, loading, property, propertyId, getPropertyById, mustHaves, niceToHaves, dealBreakers]);
 
     // Effect 2: Calculate score and update context whenever LOCAL 'ratings' state changes (user input only)
     useEffect(() => {

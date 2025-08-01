@@ -1,9 +1,9 @@
 // src/pages/Compare.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useProperties } from '../contexts/PropertyContext';
 import { useCriteria } from '../contexts/CriteriaContext';
-import './Compare.css'; // Create this CSS file next
-import { Link } from 'react-router-dom'; // To link back to property details
+import './Compare.css';
+import { Link } from 'react-router-dom';
 
 // Helper function for formatting price
 const formatPrice = (price) => {
@@ -17,39 +17,126 @@ const formatPrice = (price) => {
 };
 
 // Helper to display rating values consistently
-const displayRating = (property, criterion) => {
-    const rating = property.ratings?.[criterion.id]; // Use optional chaining
+const displayRating = (property, criterion, isMobile = false) => {
+    const rating = property.ratings?.[criterion.id];
 
     if (rating === undefined || rating === null) {
-        return <span className="rating-display not-rated">--</span>;
+        return <span className="criteria-rating not-rated">--</span>;
     }
 
     switch (criterion.type) {
         case 'mustHave':
             return rating ?
-                <span className="rating-display met"><i className="fas fa-check-circle"></i> Yes</span> :
-                <span className="rating-display not-met"><i className="fas fa-times-circle"></i> No</span>;
+                <span className="criteria-rating met"><i className="fas fa-check-circle"></i> {isMobile ? 'Yes' : 'Yes'}</span> :
+                <span className="criteria-rating not-met"><i className="fas fa-times-circle"></i> {isMobile ? 'No' : 'No'}</span>;
         case 'dealBreaker':
-            // Checked (true) means the negative condition IS present
             return rating ?
-                <span className="rating-display not-met"><i className="fas fa-ban"></i> Yes</span> :
-                <span className="rating-display met"><i className="fas fa-check-circle"></i> No</span>;
+                <span className="criteria-rating not-met"><i className="fas fa-ban"></i> {isMobile ? 'Yes' : 'Yes'}</span> :
+                <span className="criteria-rating met"><i className="fas fa-check-circle"></i> {isMobile ? 'No' : 'No'}</span>;
         case 'niceToHave':
-            // Display stars or number (0-5)
-            if (rating === 0) return <span className="rating-display not-rated">0/5</span>;
-            // Simple text display for table
-            return <span className="rating-display rated">{rating}/5</span>;
-            // Or render stars (might make table wide)
-            // return <span className="rating-display rated">{Array(rating).fill(null).map((_, i) => <i key={i} className="fas fa-star"></i>)}</span>
+            if (rating === 0) return <span className="criteria-rating not-rated">0/5</span>;
+            return <span className="criteria-rating rated">{rating}/5</span>;
         default:
-            return <span className="rating-display not-rated">--</span>;
+            return <span className="criteria-rating not-rated">--</span>;
     }
+};
+
+// Helper to get score class
+const getScoreClass = (score) => {
+    if (score === null || score === undefined) return 'zero';
+    if (score >= 75) return 'high';
+    if (score >= 50) return 'medium';
+    if (score === 0) return 'zero';
+    return 'low';
+};
+
+// Mobile Property Card Component
+const MobilePropertyCard = ({ property, mustHaves, niceToHaves, dealBreakers }) => {
+    return (
+        <div className="mobile-property-card">
+            <div className="property-header">
+                <h2 className="property-title">
+                    <Link to={`/properties/${property.id}`}>
+                        {property.address}
+                    </Link>
+                </h2>
+                <div className={`property-score ${getScoreClass(property.score)}`}>
+                    {property.score ?? '--'}
+                </div>
+            </div>
+
+            <div className="property-basic-info">
+                <div className="basic-info-grid">
+                    <div className="info-item">
+                        <div className="info-label">Price</div>
+                        <div className="info-value">{formatPrice(property.price)}</div>
+                    </div>
+                    <div className="info-item">
+                        <div className="info-label">Bedrooms</div>
+                        <div className="info-value">{property.beds ?? 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                        <div className="info-label">Bathrooms</div>
+                        <div className="info-value">{property.baths ?? 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                        <div className="info-label">Sq. Footage</div>
+                        <div className="info-value">{property.sqft ? `${property.sqft} sqft` : 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="criteria-section">
+                {mustHaves.length > 0 && (
+                    <div className="criteria-group">
+                        <h3>Must Haves</h3>
+                        {mustHaves.map(criterion => (
+                            <div key={criterion.id} className="criteria-item">
+                                <div className="criteria-text">{criterion.text}</div>
+                                {displayRating(property, criterion, true)}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {dealBreakers.length > 0 && (
+                    <div className="criteria-group">
+                        <h3>Deal Breakers</h3>
+                        {dealBreakers.map(criterion => (
+                            <div key={criterion.id} className="criteria-item">
+                                <div className="criteria-text">{criterion.text}</div>
+                                {displayRating(property, criterion, true)}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {niceToHaves.length > 0 && (
+                    <div className="criteria-group">
+                        <h3>Nice to Haves</h3>
+                        {niceToHaves.map(criterion => (
+                            <div key={criterion.id} className="criteria-item">
+                                <div className="criteria-text">
+                                    {criterion.text}
+                                    <span className="criteria-weight">(Weight: {criterion.weight})</span>
+                                </div>
+                                {displayRating(property, criterion, true)}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 };
 
 function Compare() {
   // Get data from contexts
   const { properties } = useProperties();
   const { mustHaves, niceToHaves, dealBreakers } = useCriteria();
+  
+  // State for mobile navigation
+  const [currentPropertyIndex, setCurrentPropertyIndex] = useState(0);
 
   // Combine all criteria for row headers
   const allCriteria = [...mustHaves, ...niceToHaves, ...dealBreakers];
@@ -67,11 +154,60 @@ function Compare() {
       );
   }
 
+  const handlePrevious = () => {
+    setCurrentPropertyIndex(prev => 
+      prev > 0 ? prev - 1 : sortedProperties.length - 1
+    );
+  };
+
+  const handleNext = () => {
+    setCurrentPropertyIndex(prev => 
+      prev < sortedProperties.length - 1 ? prev + 1 : 0
+    );
+  };
+
+  const currentProperty = sortedProperties[currentPropertyIndex];
+
   return (
     <div className="compare-container">
       <h1>Compare Properties</h1>
 
-      <div className="compare-table-wrapper"> {/* Wrapper for horizontal scrolling */}
+      {/* Mobile Layout */}
+      <div className="mobile-compare-wrapper">
+        {sortedProperties.length > 1 && (
+          <div className="mobile-property-nav">
+            <button 
+              className="nav-button" 
+              onClick={handlePrevious}
+              disabled={sortedProperties.length <= 1}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+            
+            <span className="property-counter">
+              {currentPropertyIndex + 1} of {sortedProperties.length}
+            </span>
+            
+            <button 
+              className="nav-button" 
+              onClick={handleNext}
+              disabled={sortedProperties.length <= 1}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        )}
+
+        <MobilePropertyCard 
+          property={currentProperty}
+          mustHaves={mustHaves}
+          niceToHaves={niceToHaves}
+          dealBreakers={dealBreakers}
+        />
+      </div>
+
+      {/* Desktop/Tablet Table Layout */}
+      <div className="compare-table-wrapper">
         <table className="compare-table">
           <thead>
             <tr>
@@ -135,7 +271,9 @@ function Compare() {
                 </td>
                 {sortedProperties.map(prop => (
                   <td key={prop.id} className="data-cell rating-cell">
-                    {displayRating(prop, criterion)}
+                    <span className="rating-display">
+                      {displayRating(prop, criterion, false)}
+                    </span>
                   </td>
                 ))}
               </tr>

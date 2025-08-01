@@ -1,18 +1,28 @@
-/* SearchAndFilter.css */
+/* SearchAndFilter.css - Mobile-first */
 .search-and-filter {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e1e5e9;
+    border: 1px solid var(--border-color);
 }
 
 .search-controls {
     display: flex;
-    gap: 15px;
-    align-items: center;
-    padding: 20px;
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: stretch;
+    padding: var(--space-4);
     border-bottom: 1px solid #f0f0f0;
+}
+
+@media (min-width: 768px) {
+    .search-controls {
+        flex-direction: row;
+        align-items: center;
+        padding: var(--space-5);
+        gap: var(--space-5);
+    }
 }
 
 .search-input-container {

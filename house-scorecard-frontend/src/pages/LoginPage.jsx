@@ -23,7 +23,7 @@ function LoginPage() {
             } else {
                 setError(result.error);
             }
-        } catch (err) {
+        } catch {
             setError('An unexpected error occurred');
         } finally {
             setIsLoading(false);

@@ -1,27 +1,46 @@
+/* Mobile-first Toast Container */
 .toast-container {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: var(--space-4);
+  left: var(--space-4);
+  right: var(--space-4);
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 400px;
+  gap: var(--space-3);
+  max-width: none;
+}
+
+@media (min-width: 768px) {
+  .toast-container {
+    top: var(--space-5);
+    right: var(--space-5);
+    left: auto;
+    max-width: 400px;
+  }
 }
 
 .toast {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   background: white;
   border-left: 4px solid;
   animation: slideIn 0.3s ease-out;
-  min-height: 50px;
+  min-height: 52px;
   max-width: 100%;
   word-wrap: break-word;
+  font-size: var(--font-sm);
+}
+
+@media (min-width: 768px) {
+  .toast {
+    font-size: var(--font-base);
+    min-height: 50px;
+  }
 }
 
 .toast--success {

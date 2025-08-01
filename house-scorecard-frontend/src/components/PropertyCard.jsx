@@ -84,57 +84,60 @@ function PropertyCard({ property, showStatusSelector = false }) {
         )}
       </div>
 
-      {/* Property Information Section */}
-      <div className="property-info">
-        <h2>{property.address || 'Address Unavailable'}</h2>
-        {property.listingUrl && (
-          <p className="listing-url">
-            <a href={property.listingUrl} target="_blank" rel="noopener noreferrer">
-              View Listing
-            </a>
+      {/* Property content wrapper for mobile/desktop layout */}
+      <div className="property-content">
+        {/* Property Information Section */}
+        <div className="property-info">
+          <h2>{property.address || 'Address Unavailable'}</h2>
+          {property.listingUrl && (
+            <p className="listing-url">
+              <a href={property.listingUrl} target="_blank" rel="noopener noreferrer">
+                View Listing
+              </a>
+            </p>
+          )}
+          <p className="price">{formatPrice(property.price)}</p>
+          {/* Basic Stats (Beds, Baths, SqFt) */}
+          <div className="stats">
+            {/* Conditionally render each stat only if value exists */}
+            {property.beds != null && <span><i className="fas fa-bed"></i> {property.beds} Beds</span>}
+            {property.baths != null && <span><i className="fas fa-bath"></i> {property.baths} Baths</span>}
+            {property.sqft != null && <span><i className="fas fa-ruler-combined"></i> {property.sqft} sqft</span>}
+            {/* Show message if no stats available? Optional */}
+            {property.beds == null && property.baths == null && property.sqft == null && <span><i>No size details</i></span>}
+          </div>
+        </div>
+
+        {/* Score and Status Area */}
+        <div className="score-area">
+          {/* Score Badge */}
+          <div className={`score-circle ${getScoreClass(property.score)}`}>
+             {/* Display score or placeholder '--' */}
+             {property.score ?? '--'}
+          </div>
+          {/* Status Indicator */}
+          <p className={`must-haves-status must-haves-${statusClass}`}>
+            <i className={`fas ${statusIcon}`}></i>
+             {statusText}
           </p>
-        )}
-        <p className="price">{formatPrice(property.price)}</p>
-        {/* Basic Stats (Beds, Baths, SqFt) */}
-        <div className="stats">
-          {/* Conditionally render each stat only if value exists */}
-          {property.beds != null && <span><i className="fas fa-bed"></i> {property.beds} Beds</span>}
-          {property.baths != null && <span><i className="fas fa-bath"></i> {property.baths} Baths</span>}
-          {property.sqft != null && <span><i className="fas fa-ruler-combined"></i> {property.sqft} sqft</span>}
-          {/* Show message if no stats available? Optional */}
-          {property.beds == null && property.baths == null && property.sqft == null && <span><i>No size details</i></span>}
         </div>
-      </div>
-
-      {/* Score and Status Area */}
-      <div className="score-area">
-        {/* Score Badge */}
-        <div className={`score-circle ${getScoreClass(property.score)}`}>
-           {/* Display score or placeholder '--' */}
-           {property.score ?? '--'}
+        
+        {/* Property Status - moved inside content for better desktop layout */}
+        <div className="property-status-area">
+          {showStatusSelector ? (
+            <StatusSelector
+              currentStatus={property.status}
+              onStatusChange={handleStatusChange}
+              size="small"
+              showCurrentBadge={false}
+            />
+          ) : (
+            <StatusBadge
+              status={property.status}
+              size="small"
+            />
+          )}
         </div>
-        {/* Status Indicator */}
-        <p className={`must-haves-status must-haves-${statusClass}`}>
-          <i className={`fas ${statusIcon}`}></i>
-           {statusText}
-        </p>
-      </div>
-
-      {/* Property Status */}
-      <div className="property-status-area">
-        {showStatusSelector ? (
-          <StatusSelector
-            currentStatus={property.status}
-            onStatusChange={handleStatusChange}
-            size="small"
-            showCurrentBadge={false}
-          />
-        ) : (
-          <StatusBadge
-            status={property.status}
-            size="small"
-          />
-        )}
       </div>
 
     </div> // End property-card
