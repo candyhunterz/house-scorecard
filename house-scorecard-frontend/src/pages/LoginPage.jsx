@@ -13,7 +13,8 @@ function LoginPage() {
         setError(''); // Clear previous errors
 
         try {
-            const response = await fetch('http://localhost:8000/api/token/', {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+            const response = await fetch(`${API_BASE_URL}/token/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

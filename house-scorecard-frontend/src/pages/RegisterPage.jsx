@@ -19,7 +19,8 @@ function RegisterPage() {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/register/', {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+            const response = await fetch(`${API_BASE_URL}/register/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
