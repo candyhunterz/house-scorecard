@@ -186,6 +186,7 @@ export function CriteriaProvider({ children }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(updatedCriterion),
       });
