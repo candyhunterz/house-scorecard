@@ -20,6 +20,11 @@ export function PropertyProvider({ children }) {
 
     useEffect(() => {
       const fetchProperties = async () => {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          console.log("No access token found, skipping property fetch.");
+          return;
+        }
         try {
           const response = await fetch(getApiUrl('/properties/'), {
             headers: getAuthHeaders(),
