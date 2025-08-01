@@ -104,7 +104,7 @@ const calculateScore = (ratings, mustHaves, niceToHaves, dealBreakers) => {
 function PropertyDetail() {
     const { propertyId } = useParams();
     // Get context functions including updatePropertyImages
-    const { getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages } = useProperties();
+    const { getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty } = useProperties();
     const { mustHaves, niceToHaves, dealBreakers } = useCriteria();
     const navigate = useNavigate();
 
@@ -212,6 +212,19 @@ function PropertyDetail() {
         alert(`${addedCount} new image URL(s) added!`); // Success feedback
     }; // End handleAddImages
 
+    const handleDeleteProperty = async () => {
+        if (window.confirm('Are you sure you want to delete this property?')) {
+            try {
+                await deleteProperty(property.id);
+                alert('Property deleted successfully!');
+                navigate('/properties'); // Redirect to properties list after deletion
+            } catch (error) {
+                console.error('Error deleting property:', error);
+                alert('Failed to delete property.');
+            }
+        }
+    };
+
     // --- Helper Functions ---
     const formatPrice = (price) => {
        if (price == null || isNaN(Number(price))) { return 'N/A'; }
@@ -312,9 +325,8 @@ function PropertyDetail() {
                     </div>
                     {/* Action Buttons */}
                     <div className="detail-actions">
-                        {/* Placeholder functionality for buttons */}
-                        <button className="btn btn-primary" onClick={() => alert('Edit property details (notes, price, etc.) - To Be Implemented')}><i className="fas fa-edit"></i> Edit Details</button>
-                        <button className="btn btn-danger" onClick={() => alert('Delete property - To Be Implemented')}><i className="fas fa-trash-alt"></i> Delete Property</button>
+                        <button className="btn btn-primary" onClick={() => navigate(`/edit-property/${property.id}`)}><i className="fas fa-edit"></i> Edit Details</button>
+                        <button className="btn btn-danger" onClick={handleDeleteProperty}><i className="fas fa-trash-alt"></i> Delete Property</button>
                     </div>
                 </div>
                 {/* End Information Column */}

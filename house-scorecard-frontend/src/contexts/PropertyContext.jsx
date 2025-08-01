@@ -175,6 +175,47 @@ export function PropertyProvider({ children }) {
   }, [properties]); // Depends only on setProperties
 
 
+  /** Deletes a property by its ID */
+  const deleteProperty = useCallback(async (id) => {
+    console.log(`CONTEXT: deleteProperty called for ID: ${id}`);
+    try {
+      const response = await fetch(getApiUrl(`/properties/${id}/`), {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      setProperties(prevProperties => prevProperties.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Failed to delete property:', error);
+    }
+  }, [getAuthHeaders]);
+
+  /** Updates an existing property in the state */
+  const updateProperty = useCallback(async (id, updatedData) => {
+    console.log(`CONTEXT: updateProperty called for ID: ${id}`, updatedData);
+    try {
+      const response = await fetch(getApiUrl(`/properties/${id}/`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const savedProperty = await response.json();
+      setProperties(prevProperties =>
+        prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
+      );
+    } catch (error) {
+      console.error('Failed to update property:', error);
+    }
+  }, [getAuthHeaders]);
+
   // --- Memoize the context value object itself ---
   // Bundles all state and functions provided by the context
   const value = useMemo(() => ({
@@ -183,9 +224,11 @@ export function PropertyProvider({ children }) {
     getPropertyById,               // Memoized function
     updatePropertyRatingsAndScore, // Memoized function
     updatePropertyImages,          // Memoized function
+    deleteProperty,                // Memoized function
+    updateProperty,                // Memoized function
   }), [
       properties, // Re-memoize value object if properties array changes
-      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages // Include stable functions
+      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty // Include stable functions
   ]);
 
 

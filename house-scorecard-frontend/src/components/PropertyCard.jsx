@@ -77,6 +77,13 @@ function PropertyCard({ property }) {
       {/* Property Information Section */}
       <div className="property-info">
         <h2>{property.address || 'Address Unavailable'}</h2>
+        {property.listingUrl && (
+          <p className="listing-url">
+            <a href={property.listingUrl} target="_blank" rel="noopener noreferrer">
+              View Listing
+            </a>
+          </p>
+        )}
         <p className="price">{formatPrice(property.price)}</p>
         {/* Basic Stats (Beds, Baths, SqFt) */}
         <div className="stats">

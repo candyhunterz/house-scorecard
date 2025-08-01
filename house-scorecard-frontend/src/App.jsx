@@ -8,6 +8,7 @@ import Criteria from './pages/Criteria';
 import MapPage from './pages/MapPage';
 import PropertyDetail from './pages/PropertyDetail';
 import AddProperty from './pages/AddProperty';
+import EditProperty from './pages/EditProperty';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="/" element={<PrivateRoute><Navigate replace to="/properties" /></PrivateRoute>} />
             <Route path="/properties" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/properties/:propertyId" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
+            <Route path="/edit-property/:propertyId" element={<PrivateRoute><EditProperty /></PrivateRoute>} />
             <Route path="/add-property" element={<PrivateRoute><AddProperty /></PrivateRoute>} />
             <Route path="/compare" element={<PrivateRoute><Compare /></PrivateRoute>} />
             <Route path="/criteria" element={<PrivateRoute><Criteria /></PrivateRoute>} />
