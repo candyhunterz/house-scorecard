@@ -21,7 +21,7 @@ export function PropertyProvider({ children }) {
     useEffect(() => {
       const fetchProperties = async () => {
         try {
-          const response = await await fetch(getApiUrl('/properties/'), {
+          const response = await fetch(getApiUrl('/properties/'), {
             headers: getAuthHeaders(),
           });
           if (!response.ok) {
