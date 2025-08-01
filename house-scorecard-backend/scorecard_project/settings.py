@@ -161,5 +161,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    'https://your-vercel-frontend.vercel.app', # Replace with your Vercel URL
+    'https://house-scorecard.vercel.app', # Replace with your Vercel URL
 ]
