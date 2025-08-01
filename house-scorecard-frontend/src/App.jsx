@@ -1,6 +1,11 @@
 // src/App.jsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PropertyProvider } from './contexts/PropertyContext';
+import { CriteriaProvider } from './contexts/CriteriaContext';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Compare from './pages/Compare';
@@ -9,38 +14,54 @@ import MapPage from './pages/MapPage';
 import PropertyDetail from './pages/PropertyDetail';
 import AddProperty from './pages/AddProperty';
 import EditProperty from './pages/EditProperty';
+import Settings from './pages/Settings';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
 function PrivateRoute({ children }) {
-  const isAuthenticated = localStorage.getItem('accessToken');
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="app-layout">
-        <Sidebar />
-        <main className="main-content-area">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+      <AuthProvider>
+        <ToastProvider>
+          <PropertyProvider>
+            <CriteriaProvider>
+              <div className="app-layout">
+                <Sidebar />
+                <main className="main-content-area">
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected Routes */}
-            <Route path="/" element={<PrivateRoute><Navigate replace to="/properties" /></PrivateRoute>} />
-            <Route path="/properties" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/properties/:propertyId" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
-            <Route path="/edit-property/:propertyId" element={<PrivateRoute><EditProperty /></PrivateRoute>} />
-            <Route path="/add-property" element={<PrivateRoute><AddProperty /></PrivateRoute>} />
-            <Route path="/compare" element={<PrivateRoute><Compare /></PrivateRoute>} />
-            <Route path="/criteria" element={<PrivateRoute><Criteria /></PrivateRoute>} />
-            <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
+                    {/* Protected Routes */}
+                    <Route path="/" element={<PrivateRoute><Navigate replace to="/properties" /></PrivateRoute>} />
+                    <Route path="/properties" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                    <Route path="/properties/:propertyId" element={<PrivateRoute><PropertyDetail /></PrivateRoute>} />
+                    <Route path="/edit-property/:propertyId" element={<PrivateRoute><EditProperty /></PrivateRoute>} />
+                    <Route path="/add-property" element={<PrivateRoute><AddProperty /></PrivateRoute>} />
+                    <Route path="/compare" element={<PrivateRoute><Compare /></PrivateRoute>} />
+                    <Route path="/criteria" element={<PrivateRoute><Criteria /></PrivateRoute>} />
+                    <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
+                    <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
 
-            <Route path="*" element={<div><h2>404 Not Found</h2><p>Sorry, this page doesn't exist.</p></div>} />
-          </Routes>
-        </main>
-      </div>
+                    <Route path="*" element={<div><h2>404 Not Found</h2><p>Sorry, this page doesn't exist.</p></div>} />
+                  </Routes>
+                </main>
+                <ToastContainer />
+              </div>
+            </CriteriaProvider>
+          </PropertyProvider>
+        </ToastProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

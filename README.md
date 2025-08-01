@@ -11,31 +11,38 @@ This repository contains:
 **Frontend:**
 *   User registration and login.
 *   Add new property details (address, price, stats, notes, image URLs).
-*   View properties list on a dashboard.
-*   Filter and sort the property list (by score, price, address).
-*   View detailed information for a single property.
+*   View properties list on a dashboard with enhanced search and filtering.
+*   **Property Status Tracking**: Full pipeline management (Interested → Viewing Scheduled → Viewed → Offer Made → Under Contract → Closed → Passed).
+*   **Advanced Filtering**: Filter by price, score, beds, baths, square footage, criteria status, and property status.
+*   **Enhanced Search**: Real-time search across property addresses and notes.
+*   View detailed information for a single property with status timeline.
 *   Define custom criteria (Must-Haves, Nice-to-Haves with weights/categories/rating types, Deal Breakers).
-*   Edit/Delete existing criteria.
+*   Edit/Delete existing criteria with confirmation dialogs.
 *   Rate properties against defined criteria using various input types (Checkbox, Stars, Scale 1-10).
-*   Dynamically calculated property score based on ratings and criteria.
+*   Dynamically calculated property score based on ratings and criteria with instant updates.
 *   View a breakdown of how the score was calculated.
-*   Compare multiple properties side-by-side in a table.
-*   View properties on an interactive map (Map View).
-*   Display images associated with properties (using URLs).
+*   **Toast Notifications**: User-friendly notifications for all actions.
+*   **Settings Page**: Manage criteria and application preferences.
+*   Display images associated with properties (using URLs) with gallery view.
 
 **Backend:**
 *   Django project structure with a `core` app.
 *   `Property`, `Criterion`, and `Rating` models defined in `core/models.py`.
-*   Scoring logic implemented in the `Property` model.
+*   **Enhanced Property Model**: Includes `status`, `status_history`, and `score` fields for complete tracking.
+*   Scoring logic implemented in the `Property` model with automatic recalculation.
+*   **Full Status Support**: 7-stage property status pipeline with history tracking.
 *   REST API endpoints for user management and all core models using Django Rest Framework and Simple JWT.
+*   **Complete API Integration**: All frontend features fully synchronized with backend.
 *   Secure CORS policy for production.
 *   Error monitoring with Sentry.
 
 ## Tech Stack
 
-*   **Frontend:** React, Vite, JavaScript, CSS, `react-router-dom`, `leaflet`, `react-leaflet`
+*   **Frontend:** React, Vite, JavaScript, CSS, `react-router-dom`, React Context API
 *   **Backend:** Python, Django, Django Rest Framework (DRF), Gunicorn
 *   **Database:** PostgreSQL (production), SQLite (development)
+*   **State Management:** React Context with localStorage fallback
+*   **UI/UX:** Custom CSS with responsive design, Toast notifications, Confirmation dialogs
 *   **Monitoring:** Sentry
 
 ## Prerequisites
@@ -70,7 +77,7 @@ source venv/bin/activate
 # Install backend dependencies
 pip install -r requirements.txt
 
-# Apply database migrations
+# Apply database migrations (includes new status tracking fields)
 python manage.py migrate
 
 # Create a superuser account for the Django Admin
@@ -122,3 +129,64 @@ This project is configured for deployment with Render for the backend and Vercel
 5.  **Deploy:** Click "Deploy".
 
 **Important:** After deploying the frontend, remember to add your Vercel app's URL to the `CORS_ALLOWED_ORIGINS` list in the backend `settings.py` and redeploy the backend for the change to take effect.
+
+## Recent Updates (Latest Version)
+
+### 🎉 **Major Feature Additions**
+
+**Property Status Tracking System**
+- Complete 7-stage pipeline: Interested → Viewing Scheduled → Viewed → Offer Made → Under Contract → Closed → Passed
+- Status history tracking with timestamps and notes
+- Visual status indicators with color-coded badges
+- Status filtering and search capabilities
+
+**Enhanced User Experience** 
+- Toast notification system replacing browser alerts
+- Confirmation dialogs for destructive actions
+- Immediate UI feedback for all operations
+- Real-time search and advanced filtering
+- Settings page for criteria management
+
+**Backend Integration Improvements**
+- Full database persistence for all new features
+- Status and status history fields added to Property model
+- Complete API synchronization between frontend and backend  
+- Robust error handling with localStorage fallback
+- Database migration for seamless upgrades
+
+### 🔧 **Technical Improvements**
+
+**State Management**
+- Optimized React Context implementation
+- Prevented infinite API loops
+- Fixed React re-rendering issues
+- Improved component lifecycle management
+
+**Data Persistence**
+- All ratings, scores, and status changes persist to database
+- localStorage backup for offline capability
+- Immediate local updates with background sync
+- Data integrity through proper validation
+
+**User Interface**
+- Responsive design for mobile compatibility
+- Enhanced property cards with status display
+- Improved property detail page layout
+- Better visual hierarchy and user flow
+
+### 📱 **New User Capabilities**
+
+- Track properties through entire house hunting process
+- See complete timeline of property status changes  
+- Filter properties by status, criteria, and custom ranges
+- Get instant feedback for all actions
+- Manage preferences through dedicated settings page
+- View property galleries with improved image handling
+
+### 🚀 **Deployment Ready**
+
+- Frontend build passes with all optimizations
+- Backend migrations applied successfully
+- Full API compatibility verified
+- Error handling tested and robust
+- Production-ready configuration maintained

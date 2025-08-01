@@ -1,0 +1,139 @@
+/* ConfirmDialog.css */
+.confirm-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-dialog {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 320px;
+    max-width: 500px;
+    width: 90%;
+    animation: slideIn 0.2s ease-out;
+}
+
+.confirm-dialog-header {
+    padding: 20px 20px 0;
+    border-bottom: none;
+}
+
+.confirm-dialog-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.confirm-dialog-body {
+    padding: 15px 20px;
+}
+
+.confirm-dialog-body p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #555;
+}
+
+.confirm-dialog-actions {
+    padding: 0 20px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.confirm-dialog-actions .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.confirm-dialog-actions .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.confirm-dialog-actions .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.confirm-dialog-actions .btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.confirm-dialog-actions .btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.confirm-dialog-actions .btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.confirm-dialog-actions .btn-danger:hover {
+    background-color: #c82333;
+}
+
+/* Dialog type variants */
+.confirm-dialog-warning .confirm-dialog-header h3 {
+    color: #856404;
+}
+
+.confirm-dialog-danger .confirm-dialog-header h3 {
+    color: #721c24;
+}
+
+.confirm-dialog-info .confirm-dialog-header h3 {
+    color: #0c5460;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .confirm-dialog {
+        margin: 20px;
+        width: calc(100% - 40px);
+    }
+    
+    .confirm-dialog-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .confirm-dialog-actions .btn {
+        width: 100%;
+        margin: 3px 0;
+    }
+}

@@ -2,30 +2,84 @@
 import React, { useState, useMemo } from 'react'; // Added useMemo
 import { useNavigate } from 'react-router-dom';
 import PropertyCard from '../components/PropertyCard';
+import SearchAndFilter from '../components/SearchAndFilter';
 import { useProperties } from '../contexts/PropertyContext';
+import { useCriteria } from '../contexts/CriteriaContext';
 import './Dashboard.css'; // Ensure styles are imported
 
 function Dashboard() {
   // Get properties from context
   const { properties } = useProperties();
+  const { mustHaves, dealBreakers } = useCriteria();
   const navigate = useNavigate();
 
   // --- State for Sorting and Filtering ---
   const [sortBy, setSortBy] = useState('score_desc'); // Initial sort: Score Descending
-  const [filterText, setFilterText] = useState('');   // Initial filter: Empty
+  const [searchText, setSearchText] = useState('');   // Search text
+  const [filters, setFilters] = useState({
+    minPrice: null,
+    maxPrice: null,
+    minScore: null,
+    maxScore: null,
+    minBeds: null,
+    maxBeds: null,
+    minBaths: null,
+    maxBaths: null,
+    minSqft: null,
+    maxSqft: null,
+    mustHavesMet: null,
+    dealBreakersPresent: null,
+    statuses: []
+  });
 
   // --- Event Handlers ---
-  const handleSortChange = (e) => {
-    setSortBy(e.target.value);
+  const handleSortChange = (newSortBy) => {
+    setSortBy(newSortBy);
   };
 
-  const handleFilterChange = (e) => {
-    setFilterText(e.target.value);
+  const handleSearchChange = (newSearchText) => {
+    setSearchText(newSearchText);
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setSearchText('');
+    setFilters({
+      minPrice: null,
+      maxPrice: null,
+      minScore: null,
+      maxScore: null,
+      minBeds: null,
+      maxBeds: null,
+      minBaths: null,
+      maxBaths: null,
+      minSqft: null,
+      maxSqft: null,
+      mustHavesMet: null,
+      dealBreakersPresent: null,
+      statuses: []
+    });
   };
 
   const handleAddPropertyClick = () => { navigate('/add-property'); };
   const handleCardClick = (propertyId) => { navigate(`/properties/${propertyId}`); };
-  const handleSettingsClick = () => { navigate('/settings'); }; // Or open modal
+  const handleSettingsClick = () => { navigate('/settings'); };
+
+  // Helper function to check if property meets criteria requirements
+  const checkCriteriaStatus = (property) => {
+    const ratings = property.ratings || {};
+    
+    // Check must-haves
+    const mustHavesMet = mustHaves.length === 0 || mustHaves.every(mh => ratings[mh.id] === true);
+    
+    // Check deal-breakers
+    const hasDealBreakers = dealBreakers.some(db => ratings[db.id] === true);
+    
+    return { mustHavesMet, hasDealBreakers };
+  };
 
   // --- Filtering and Sorting Logic ---
   // Use useMemo to avoid recalculating on every render unless properties, filter, or sort changes
@@ -33,14 +87,49 @@ function Dashboard() {
     console.log("Filtering/Sorting Properties...");
 
     // 1. Filter
-    const lowerCaseFilter = filterText.toLowerCase();
+    const lowerCaseSearch = searchText.toLowerCase();
     const filtered = properties.filter(prop => {
-      // Simple filter: checks address and notes (case-insensitive)
-      return (
-        prop.address?.toLowerCase().includes(lowerCaseFilter) ||
-        prop.notes?.toLowerCase().includes(lowerCaseFilter)
-        // Add more fields to filter later (e.g., price range, beds)
+      // Text search: checks address and notes (case-insensitive)
+      const matchesSearch = !searchText || (
+        prop.address?.toLowerCase().includes(lowerCaseSearch) ||
+        prop.notes?.toLowerCase().includes(lowerCaseSearch)
       );
+      
+      if (!matchesSearch) return false;
+      
+      // Price filters
+      if (filters.minPrice && (prop.price === null || prop.price < filters.minPrice)) return false;
+      if (filters.maxPrice && (prop.price === null || prop.price > filters.maxPrice)) return false;
+      
+      // Score filters
+      if (filters.minScore && (prop.score === null || prop.score < filters.minScore)) return false;
+      if (filters.maxScore && (prop.score === null || prop.score > filters.maxScore)) return false;
+      
+      // Bedroom filters
+      if (filters.minBeds && (prop.beds === null || prop.beds < filters.minBeds)) return false;
+      if (filters.maxBeds && (prop.beds === null || prop.beds > filters.maxBeds)) return false;
+      
+      // Bathroom filters
+      if (filters.minBaths && (prop.baths === null || prop.baths < filters.minBaths)) return false;
+      if (filters.maxBaths && (prop.baths === null || prop.baths > filters.maxBaths)) return false;
+      
+      // Square footage filters
+      if (filters.minSqft && (prop.sqft === null || prop.sqft < filters.minSqft)) return false;
+      if (filters.maxSqft && (prop.sqft === null || prop.sqft > filters.maxSqft)) return false;
+      
+      // Criteria-based filters
+      const { mustHavesMet, hasDealBreakers } = checkCriteriaStatus(prop);
+      
+      if (filters.mustHavesMet && !mustHavesMet) return false;
+      if (filters.dealBreakersPresent === false && hasDealBreakers) return false;
+      
+      // Status filters
+      if (filters.statuses && filters.statuses.length > 0) {
+        const propStatus = prop.status; // Keep as null if unset
+        if (!filters.statuses.includes(propStatus)) return false;
+      }
+      
+      return true;
     });
 
     // 2. Sort
@@ -67,50 +156,56 @@ function Dashboard() {
 
     return sorted;
 
-  }, [properties, filterText, sortBy]); // Dependencies for recalculation
+  }, [properties, searchText, filters, sortBy, mustHaves, dealBreakers]); // Dependencies for recalculation
 
 
   return (
     <div className="dashboard-container">
-      {/* --- Updated Header with Controls --- */}
+      {/* Header */}
       <header className="dashboard-header">
-        <h1>My Properties ({filteredAndSortedProperties.length})</h1>
-        <div className="dashboard-controls">
-           {/* Filter Input */}
-           <input
-              type="text"
-              placeholder="Filter by address/notes..."
-              value={filterText}
-              onChange={handleFilterChange}
-              className="filter-input"
-           />
-           {/* Sort Dropdown */}
-           <select value={sortBy} onChange={handleSortChange} className="sort-select">
-             <option value="score_desc">Sort: Score (High-Low)</option>
-             <option value="score_asc">Sort: Score (Low-High)</option>
-             <option value="price_asc">Sort: Price (Low-High)</option>
-             <option value="price_desc">Sort: Price (High-Low)</option>
-             <option value="address_asc">Sort: Address (A-Z)</option>
-             <option value="address_desc">Sort: Address (Z-A)</option>
-             {/* Add Date Added later */}
-           </select>
-           {/* Settings Icon (Optional) */}
+        <h1>My Properties</h1>
+        <div className="dashboard-actions">
+           {/* Settings Icon */}
            <i className="fas fa-cog settings-icon" title="Settings" onClick={handleSettingsClick}></i>
         </div>
       </header>
-      {/* --- End Updated Header --- */}
+      
+      {/* Search and Filter Component */}
+      <SearchAndFilter
+        searchText={searchText}
+        onSearchChange={handleSearchChange}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
+        onClearFilters={handleClearFilters}
+        resultCount={filteredAndSortedProperties.length}
+        totalCount={properties.length}
+      />
 
 
       {/* --- Property List --- */}
       <div className="property-list">
         {/* Render message or the filtered/sorted list */}
         {filteredAndSortedProperties.length === 0 ? (
-          <p className="no-properties-message">
-            {properties.length === 0 ? // Check if original list was empty
-                "No properties added yet. Click the '+' button to add your first visited house!" :
-                "No properties match your current filter." // Message when filtering yields no results
-            }
-          </p>
+          <div className="no-properties-message">
+            {properties.length === 0 ? (
+              <div className="empty-state">
+                <i className="fas fa-home empty-icon"></i>
+                <h3>No properties yet</h3>
+                <p>Click the '+' button to add your first visited house!</p>
+              </div>
+            ) : (
+              <div className="no-results">
+                <i className="fas fa-search no-results-icon"></i>
+                <h3>No properties match your filters</h3>
+                <p>Try adjusting your search or filter criteria</p>
+                <button onClick={handleClearFilters} className="btn btn-secondary">
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           // Map over the derived list
           filteredAndSortedProperties.map(property => (

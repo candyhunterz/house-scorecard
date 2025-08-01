@@ -15,6 +15,20 @@ class Property(models.Model):
     longitude = models.FloatField(blank=True, null=True)
     image_urls = models.JSONField(default=list, blank=True)
     score = models.IntegerField(blank=True, null=True)
+    
+    # Status tracking fields
+    STATUS_CHOICES = [
+        ('interested', 'Interested'),
+        ('viewing_scheduled', 'Viewing Scheduled'),
+        ('viewed', 'Viewed'),
+        ('offer_made', 'Offer Made'),
+        ('under_contract', 'Under Contract'),
+        ('closed', 'Closed'),
+        ('passed', 'Passed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, blank=True, null=True, help_text="Current status in the house hunting pipeline")
+    status_history = models.JSONField(default=list, blank=True, help_text="History of status changes with timestamps")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

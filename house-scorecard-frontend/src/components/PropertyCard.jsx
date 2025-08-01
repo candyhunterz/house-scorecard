@@ -1,13 +1,23 @@
 // src/components/PropertyCard.jsx
 import React from 'react';
+import { StatusBadge, StatusSelector } from './PropertyStatus';
+import { useProperties } from '../contexts/PropertyContext';
+import { PROPERTY_STATUSES } from '../constants/propertyStatus';
 import './PropertyCard.css'; // Make sure CSS is imported
 
-function PropertyCard({ property }) {
+function PropertyCard({ property, showStatusSelector = false }) {
+  const { updatePropertyStatus } = useProperties();
+  
   // Guard clause: Render nothing or an error state if property data is missing
   if (!property) {
     // You could return null or a placeholder/error card
     return <div className="property-card error">Error: Property data unavailable.</div>;
   }
+
+  // Handle status change
+  const handleStatusChange = (newStatus) => {
+    updatePropertyStatus(property.id, newStatus);
+  };
 
   // --- Helper function to format price ---
   const formatPrice = (price) => {
@@ -108,6 +118,23 @@ function PropertyCard({ property }) {
           <i className={`fas ${statusIcon}`}></i>
            {statusText}
         </p>
+      </div>
+
+      {/* Property Status */}
+      <div className="property-status-area">
+        {showStatusSelector ? (
+          <StatusSelector
+            currentStatus={property.status}
+            onStatusChange={handleStatusChange}
+            size="small"
+            showCurrentBadge={false}
+          />
+        ) : (
+          <StatusBadge
+            status={property.status}
+            size="small"
+          />
+        )}
       </div>
 
     </div> // End property-card

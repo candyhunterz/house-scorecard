@@ -1,38 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './LoginPage.css'; // Assuming you'll create this CSS file
 
 function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(''); // Clear previous errors
+        setIsLoading(true);
 
         try {
-            const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-            const response = await fetch(`${API_BASE_URL}/token/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Login failed');
+            const result = await login(username, password);
+            if (result.success) {
+                navigate('/properties'); // Redirect to properties page
+            } else {
+                setError(result.error);
             }
-
-            const data = await response.json();
-            localStorage.setItem('accessToken', data.access);
-            localStorage.setItem('refreshToken', data.refresh);
-            navigate('/properties'); // Redirect to properties page
         } catch (err) {
-            setError(err.message);
+            setError('An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -61,7 +55,9 @@ function LoginPage() {
                         required
                     />
                 </div>
-                <button type="submit" className="login-button">Login</button>
+                <button type="submit" className="login-button" disabled={isLoading}>
+                    {isLoading ? 'Logging in...' : 'Login'}
+                </button>
             </form>
             <p>Don't have an account? <a href="/register">Register here</a></p>
         </div>

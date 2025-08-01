@@ -1,0 +1,240 @@
+/* Settings.css */
+.settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.settings-container h1 {
+    margin-bottom: 30px;
+    color: #333;
+    font-size: 2rem;
+}
+
+.settings-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.settings-section {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e1e5e9;
+}
+
+.settings-section h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 10px;
+}
+
+.settings-section h3 {
+    margin: 20px 0 10px 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.setting-item input[type="text"],
+.setting-item input[type="password"],
+.setting-item select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.setting-item input[type="text"]:focus,
+.setting-item input[type="password"]:focus,
+.setting-item select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.disabled-input {
+    background-color: #e9ecef !important;
+    color: #6c757d !important;
+    cursor: not-allowed;
+}
+
+.setting-item small {
+    display: block;
+    margin-top: 5px;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* Checkbox styling */
+.checkbox-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.checkbox-item label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-bottom: 5px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Password form styling */
+.password-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    margin-top: 15px;
+}
+
+.password-form h3 {
+    margin-top: 0;
+}
+
+/* Button styling */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+/* Danger zone styling */
+.danger-zone {
+    border: 2px solid #dc3545;
+    border-radius: 6px;
+    padding: 20px;
+    background-color: #f8d7da;
+    margin-top: 20px;
+}
+
+.danger-zone h3 {
+    color: #721c24;
+    margin-top: 0;
+}
+
+.danger-zone p {
+    color: #721c24;
+    margin-bottom: 15px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .settings-container {
+        padding: 15px;
+    }
+    
+    .settings-section {
+        padding: 20px 15px;
+    }
+    
+    .settings-container h1 {
+        font-size: 1.6rem;
+    }
+    
+    .settings-section h2 {
+        font-size: 1.2rem;
+    }
+    
+    .checkbox-item label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+
+/* Dark theme support (basic) */
+.dark-theme .settings-section {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+}
+
+.dark-theme .settings-section h2,
+.dark-theme .settings-section h3 {
+    color: #e2e8f0;
+}
+
+.dark-theme .setting-item label {
+    color: #cbd5e0;
+}
+
+.dark-theme .setting-item input,
+.dark-theme .setting-item select {
+    background-color: #4a5568;
+    border-color: #718096;
+    color: #e2e8f0;
+}
+
+.dark-theme .password-form {
+    background-color: #4a5568;
+}
+
+.dark-theme .danger-zone {
+    background-color: #742a2a;
+    border-color: #fc8181;
+}
+
+.dark-theme .danger-zone h3,
+.dark-theme .danger-zone p {
+    color: #feb2b2;
+}

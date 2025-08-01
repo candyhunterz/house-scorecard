@@ -1,20 +1,14 @@
 // src/components/Sidebar.jsx
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
 
 function Sidebar() {
-  const navigate = useNavigate();
-  const isAuthenticated = localStorage.getItem('accessToken');
+  const { isAuthenticated, logout } = useAuth();
 
   const navLinkStyle = ({ isActive }) => {
     return isActive ? 'active' : '';
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    navigate('/login');
   };
 
   return (
@@ -38,7 +32,7 @@ function Sidebar() {
       </nav>
       <div className="sidebar-footer">
         {isAuthenticated ? (
-          <button onClick={handleLogout} className="sidebar-logout-button">
+          <button onClick={logout} className="sidebar-logout-button">
             <i className="fas fa-sign-out-alt"></i> Logout
           </button>
         ) : (

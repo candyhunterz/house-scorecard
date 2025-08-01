@@ -25,11 +25,6 @@ Sentry.init({
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* Wrap App with both Providers */}
-    <PropertyProvider>
-      <CriteriaProvider>
-        <App />
-      </CriteriaProvider>
-    </PropertyProvider>
+    <App />
   </React.StrictMode>,
 );

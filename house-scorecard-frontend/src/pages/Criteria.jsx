@@ -1,6 +1,9 @@
 // src/pages/Criteria.jsx
 import React, { useState } from 'react'; // Import necessary hooks
 import { useCriteria } from '../contexts/CriteriaContext'; // Import the custom hook to access criteria state and functions
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 import './Criteria.css'; // Import styles for this page
 
 // Define helper to get display names for rating types
@@ -19,13 +22,14 @@ function AddCriterionForm({ type, onAdd, existingCategories }) {
 
   // Get available rating types from context
   const { RATING_TYPES: availableRatingTypes } = useCriteria();
+  const { showWarning } = useToast();
 
   /** Handles form submission */
   const handleSubmit = (e) => {
     e.preventDefault(); // Prevent default page reload
     const trimmedText = text.trim();
     if (!trimmedText) {
-        alert("Criterion text cannot be empty.");
+        showWarning("Criterion text cannot be empty.");
         return; // Validate: text is required
     }
 
@@ -34,7 +38,7 @@ function AddCriterionForm({ type, onAdd, existingCategories }) {
     if (type === 'niceToHave') {
         const numWeight = parseInt(weight, 10);
         if (isNaN(numWeight) || numWeight < 1 || numWeight > 10) {
-            alert("Weight must be a number between 1 and 10.");
+            showWarning("Weight must be a number between 1 and 10.");
             return; // Prevent submission if weight is invalid
         }
         criterionWeight = numWeight;
@@ -161,6 +165,7 @@ function Criteria() {
     updateCriterion, // Function to update an existing criterion
     RATING_TYPES: availableRatingTypes // Array of allowed rating types
   } = useCriteria();
+  const { showConfirm, confirmDialog } = useConfirm();
 
   // --- State for managing inline editing ---
   const [editingCriterionId, setEditingCriterionId] = useState(null); // ID of the item being edited
@@ -194,7 +199,7 @@ function Criteria() {
   const handleSaveEdit = (id, type) => {
     const trimmedText = editText.trim();
     if (!trimmedText) {
-        alert("Criterion text cannot be empty.");
+        showWarning("Criterion text cannot be empty.");
         return; // Validate text
     }
 
@@ -208,7 +213,7 @@ function Criteria() {
     if (type === 'niceToHave') {
         const newWeight = parseInt(editWeight, 10);
         if (isNaN(newWeight) || newWeight < 1 || newWeight > 10) {
-            alert("Weight must be a number between 1 and 10.");
+            showWarning("Weight must be a number between 1 and 10.");
             return; // Validate weight
         }
         updatedData.weight = newWeight;
@@ -227,11 +232,20 @@ function Criteria() {
   }; // End handleSaveEdit
 
   /** Deletes a criterion after user confirmation */
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (editingCriterionId === id) { // Cancel edit if deleting the item being edited
         handleCancelEdit();
     }
-    if (window.confirm('Are you sure you want to delete this criterion? This cannot be undone.')) {
+    
+    const confirmed = await showConfirm({
+      title: "Delete Criterion",
+      message: "Are you sure you want to delete this criterion? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "danger"
+    });
+    
+    if (confirmed) {
       console.log("DELETE: Deleting criterion ID:", id);
       deleteCriterion(id); // Call context function
     } else {
@@ -398,6 +412,9 @@ function Criteria() {
         })} {/* End mapping over sections */}
 
       </div> {/* End criteria-sections grid */}
+      
+      {/* Confirmation Dialog */}
+      <ConfirmDialog {...confirmDialog} />
     </div> // End criteria-container
   );
 }

@@ -110,3 +110,30 @@
     margin-right: 4px;
     vertical-align: middle; /* Align icon nicely with text */
   }
+
+/* Property Status Area */
+.property-status-area {
+  grid-column: 1 / -1; /* Span all columns */
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.property-status-area .status-badge {
+  margin: 0;
+}
+
+.property-status-area .status-selector {
+  width: 100%;
+  max-width: 180px;
+}
+
+.property-status-area .status-select-button {
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+  padding: 4px 8px;
+}

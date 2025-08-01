@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext';
+import { useToast } from '../contexts/ToastContext';
 import './AddProperty.css'; // Re-use the styling from AddProperty
 
 function EditProperty() {
     const { propertyId } = useParams();
     const navigate = useNavigate();
     const { getPropertyById, updateProperty } = useProperties();
+    const { showSuccess, showError } = useToast();
 
     const [property, setProperty] = useState(null);
     const [formData, setFormData] = useState({
@@ -75,11 +77,11 @@ function EditProperty() {
 
         try {
             await updateProperty(property.id, updatedData);
-            alert('Property updated successfully!');
+            showSuccess('Property updated successfully!');
             navigate(`/properties/${property.id}`); // Go back to detail page
         } catch (err) {
             console.error('Failed to update property:', err);
-            setError('Failed to update property. Please try again.');
+            showError('Failed to update property. Please try again.');
         }
     };
 

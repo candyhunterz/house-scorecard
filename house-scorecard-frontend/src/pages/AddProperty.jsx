@@ -2,11 +2,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext'; // Import context hook
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 import './AddProperty.css'; // Make sure styles are imported
 
 function AddProperty() {
   const navigate = useNavigate();
   const { addProperty } = useProperties(); // Get add function from context
+  const { showSuccess, showError, showWarning } = useToast();
+  const { showConfirm, confirmDialog } = useConfirm();
 
   // --- State for Form Inputs ---
   const [address, setAddress] = useState('');
@@ -43,13 +48,13 @@ function AddProperty() {
 
     // Basic validation (can be expanded)
     if (!address.trim() || !price.trim()) {
-        alert('Please fill in at least Address and Asking Price.');
+        showWarning('Please fill in at least Address and Asking Price.');
         return;
     }
     // More specific validation (e.g., check if price is a valid number)
     const numericPrice = parseFloat(price);
     if (isNaN(numericPrice) || numericPrice < 0) {
-        alert('Please enter a valid, non-negative Asking Price.');
+        showError('Please enter a valid, non-negative Asking Price.');
         return;
     }
 
@@ -71,17 +76,17 @@ function AddProperty() {
 
     try {
         addProperty(newPropertyData); // Call context function to add the property
-        alert('Property added successfully!'); // Provide user feedback
+        showSuccess('Property added successfully!'); // Provide user feedback
         navigate('/properties'); // Navigate back to the dashboard after successful add
     } catch (error) {
         console.error("Error adding property:", error);
-        alert("An error occurred while adding the property. Please try again."); // Error feedback
+        showError("An error occurred while adding the property. Please try again."); // Error feedback
     }
   }; // End handleSubmit
 
   // --- Cancel Handler ---
   // Checks if any fields have data before navigating away
-  const handleCancel = () => {
+  const handleCancel = async () => {
     // List of all state values that indicate user input
     const formHasData = [
         address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes
@@ -90,10 +95,18 @@ function AddProperty() {
 
     if (formHasData) {
         // Ask for confirmation only if there's data
-        if (window.confirm('You have unsaved changes. Discard and go back to the dashboard?')) {
+        const confirmed = await showConfirm({
+          title: "Discard Changes",
+          message: "You have unsaved changes. Are you sure you want to discard them and go back to the dashboard?",
+          confirmText: "Discard",
+          cancelText: "Stay",
+          type: "warning"
+        });
+        
+        if (confirmed) {
             navigate('/properties');
         }
-        // If user clicks 'Cancel' on the confirmation, do nothing.
+        // If user clicks 'Stay' on the confirmation, do nothing.
     } else {
         // If no data, navigate back without confirmation
         navigate('/properties');
@@ -192,6 +205,9 @@ function AddProperty() {
           <button type="button" className="btn btn-secondary" onClick={handleCancel}>Cancel</button>
         </div>
       </form>
+      
+      {/* Confirmation Dialog */}
+      <ConfirmDialog {...confirmDialog} />
     </div> // End add-property-container
   );
 }

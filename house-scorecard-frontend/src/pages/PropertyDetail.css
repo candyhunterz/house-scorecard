@@ -540,3 +540,38 @@
     /* grid-template-columns: 1fr 1.5fr; */
   }
 }
+
+/* Status Display Styles */
+.detail-item.status-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 0;
+}
+
+.detail-item.status-display strong {
+  min-width: 60px;
+}
+
+.detail-item.status-display .status-selector {
+  flex: 1;
+}
+
+/* Status History Section */
+.status-history-section {
+  margin-top: 30px;
+}
+
+.status-history-section .status-history {
+  margin-top: 0;
+}
+
+/* Make status selector smaller in detail view */
+.detail-item.status-display .status-selector .status-dropdown {
+  min-width: 250px;
+}
+
+.detail-item.status-display .status-select-button {
+  min-width: 150px;
+}

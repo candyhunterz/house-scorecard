@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 import './LoginPage.css'; // Reusing the same CSS for styling
 
 function RegisterPage() {
@@ -8,6 +9,7 @@ function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const { showSuccess } = useToast();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,8 +41,8 @@ function RegisterPage() {
 
             // If registration is successful, you might want to automatically log them in
             // or redirect to the login page.
+            showSuccess('Registration successful! Please log in.');
             navigate('/login');
-            alert('Registration successful! Please log in.');
 
         } catch (err) {
             setError(err.message);

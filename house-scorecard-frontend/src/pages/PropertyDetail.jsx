@@ -1,10 +1,15 @@
 // src/pages/PropertyDetail.jsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 // Make sure updatePropertyImages is imported from context
 import { useProperties } from '../contexts/PropertyContext';
 // Import context hook and rating type constants
 import { useCriteria, RATING_TYPE_STARS, RATING_TYPE_YES_NO, RATING_TYPE_SCALE_10 } from '../contexts/CriteriaContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { StatusSelector, StatusHistory } from '../components/PropertyStatus';
+import { PROPERTY_STATUSES } from '../constants/propertyStatus';
 import ScoreBreakdown from '../components/ScoreBreakdown'; // Import the breakdown component
 import './PropertyDetail.css'; // Ensure CSS is imported
 
@@ -34,11 +39,10 @@ function RatingInput({ criterion, rating, onChange }) {
     switch (criterion.type) {
         case 'mustHave':
         case 'dealBreaker':
-            const labelText = criterion.type === 'dealBreaker' ? `${criterion.text} (Is Present?)` : criterion.text;
             return (
                 <div className="rating-input checkbox-rating">
                     <input type="checkbox" id={`rating-${criterion.id}`} checked={!!rating} onChange={handleCheckboxChange}/>
-                    <label htmlFor={`rating-${criterion.id}`}>{labelText}</label>
+                    <label htmlFor={`rating-${criterion.id}`}>{criterion.text}</label>
                 </div>);
         case 'niceToHave':
             const ratingType = criterion.ratingType || RATING_TYPE_STARS;
@@ -75,27 +79,36 @@ function RatingInput({ criterion, rating, onChange }) {
 const calculateScore = (ratings, mustHaves, niceToHaves, dealBreakers) => {
     const currentRatings = ratings || {};
     for (const db of dealBreakers) { if (currentRatings[db.id] === true) { return 0; } } // Deal Breaker check
-    for (const mh of mustHaves) { if (!currentRatings[mh.id]) { return 0; } } // Must-Have check
+    for (const mh of mustHaves) { 
+        const rating = currentRatings[mh.id];
+        // Must-have fails if it's explicitly false, or if it's undefined/null (not rated)
+        if (rating !== true) { 
+            return 0; 
+        } 
+    } // Must-Have check
 
     let pointsEarned = 0;
     let maxPossiblePoints = 0;
     const MAX_NORMALIZED_RATING = 5;
+    
     for (const nth of niceToHaves) { // Nice-to-Have calculation
         const ratingValue = currentRatings[nth.id];
         const weight = nth.weight || 1;
         const ratingType = nth.ratingType || RATING_TYPE_STARS;
         let normalizedRatingValue = 0;
+        
         switch (ratingType) {
             case RATING_TYPE_YES_NO: normalizedRatingValue = ratingValue === true ? MAX_NORMALIZED_RATING : 0; break;
             case RATING_TYPE_SCALE_10: normalizedRatingValue = Math.max(0, Math.min(10, Number(ratingValue) || 0)) / 2; break;
             case RATING_TYPE_STARS: default: normalizedRatingValue = Math.max(0, Math.min(5, Number(ratingValue) || 0)); break;
         }
+        
         pointsEarned += normalizedRatingValue * weight;
         maxPossiblePoints += MAX_NORMALIZED_RATING * weight;
     }
+    
     if (maxPossiblePoints <= 0) { return 100; } // Handle no nice-to-haves
     const finalScore = Math.round((pointsEarned / maxPossiblePoints) * 100);
-    console.log(`CALC SCORE: Final Score: ${finalScore}`);
     return finalScore;
 }; // End calculateScore
 
@@ -104,8 +117,10 @@ const calculateScore = (ratings, mustHaves, niceToHaves, dealBreakers) => {
 function PropertyDetail() {
     const { propertyId } = useParams();
     // Get context functions including updatePropertyImages
-    const { getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty } = useProperties();
+    const { properties, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updatePropertyStatus } = useProperties();
     const { mustHaves, niceToHaves, dealBreakers } = useCriteria();
+    const { showSuccess, showError, showWarning } = useToast();
+    const { showConfirm, confirmDialog } = useConfirm();
     const navigate = useNavigate();
 
     // --- Component State ---
@@ -113,42 +128,71 @@ function PropertyDetail() {
     const [loading, setLoading] = useState(true);
     const [ratings, setRatings] = useState({}); // Local ratings state for inputs
     const [calculatedScore, setCalculatedScore] = useState(null); // Displayed score
+    const [initialRatingsLoaded, setInitialRatingsLoaded] = useState(false); // Track if we've loaded initial ratings
     // State for the "Add More Image URLs" input field
     const [newImageUrlsString, setNewImageUrlsString] = useState('');
+    // Track previous ratings to prevent score updates when only status changes
+    const [prevRatings, setPrevRatings] = useState({});
 
     // --- Effects ---
     // Effect 1: Load property data and set INITIAL state when propertyId changes
     useEffect(() => {
         console.log(`EFFECT 1 (Load): Running for propertyId: ${propertyId}`);
         setLoading(true);
-        setProperty(null); setRatings({}); setCalculatedScore(null); // Clear previous state
+        setProperty(null); setRatings({}); setCalculatedScore(null); setInitialRatingsLoaded(false); setPrevRatings({}); // Clear previous state
         const fetchedProperty = getPropertyById(propertyId); // Get data from context
         if (fetchedProperty) {
             setProperty(fetchedProperty); // Set the main property object
             const initialRatings = fetchedProperty.ratings || {}; // Get ratings (or empty obj)
             setRatings(initialRatings); // Set local ratings state for inputs
+            setPrevRatings(initialRatings); // Track initial ratings
+            setInitialRatingsLoaded(true); // Mark that we've loaded initial ratings
             // Set initial score display (prefer saved, else calculate)
             const initialScore = fetchedProperty.score ?? calculateScore(initialRatings, mustHaves, niceToHaves, dealBreakers);
             setCalculatedScore(initialScore);
-            console.log(`EFFECT 1 (Load): Initial load complete for ${propertyId}. Score: ${initialScore}`);
         } else {
              console.error(`EFFECT 1 (Load): Property with ID ${propertyId} not found.`);
         }
         setLoading(false); // Loading finished
-    }, [propertyId, getPropertyById, mustHaves, niceToHaves, dealBreakers]); // Dependencies
+    }, [propertyId]); // Only depend on propertyId changes
 
 
-    // Effect 2: Calculate score and update context whenever LOCAL 'ratings' state changes
+    // Effect 2: Calculate score and update context whenever LOCAL 'ratings' state changes (user input only)
     useEffect(() => {
-        if (!loading && property) { // Only run if loaded and property exists
-            console.log(`EFFECT 2 (Score Update): Ratings changed for property ${property.id}. Recalculating...`);
+        // Only run if:
+        // 1. Not loading and property exists
+        // 2. Initial ratings have been loaded (not the first load)
+        // 3. Criteria exist (to avoid division by zero)
+        // 4. Ratings have actually changed (not just status updates)
+        const ratingsChanged = JSON.stringify(ratings) !== JSON.stringify(prevRatings);
+        
+        if (!loading && property && initialRatingsLoaded && ratingsChanged && (mustHaves.length > 0 || niceToHaves.length > 0 || dealBreakers.length > 0)) {
+            console.log('Ratings changed, updating score...');
             const newScore = calculateScore(ratings, mustHaves, niceToHaves, dealBreakers);
             setCalculatedScore(newScore); // Update score displayed on this page
             // Update the central context (PropertyContext)
-            console.log(`EFFECT 2 (Score Update): Calling context update for score ${newScore}`);
             updatePropertyRatingsAndScore(property.id, ratings, newScore);
+            setPrevRatings(ratings); // Update previous ratings
         }
-    }, [ratings, loading, property, mustHaves, niceToHaves, dealBreakers, updatePropertyRatingsAndScore]); // Dependencies
+    }, [ratings, loading, property?.id, initialRatingsLoaded, mustHaves, niceToHaves, dealBreakers, updatePropertyRatingsAndScore, prevRatings]); // Use property.id instead of full property object
+
+    // Simple effect to sync property when context changes (but avoid overriding recent local changes)
+    useEffect(() => {
+        if (propertyId && !loading) {
+            const contextProperty = getPropertyById(propertyId);
+            if (contextProperty && property) {
+                // Only sync if the context has a different status than what we currently have
+                // This prevents the sync from overriding immediate local updates
+                if (contextProperty.status !== property.status) {
+                    console.log('PropertyDetail: Syncing with context. Status from context:', contextProperty.status);
+                    setProperty(contextProperty);
+                }
+            } else if (contextProperty && !property) {
+                // Initial load case
+                setProperty(contextProperty);
+            }
+        }
+    }, [properties, propertyId, loading, getPropertyById, property?.status]);
 
 
     // --- Event Handlers ---
@@ -166,7 +210,7 @@ function PropertyDetail() {
     /** Handler for adding the new image URLs */
     const handleAddImages = () => {
         if (!newImageUrlsString.trim()) {
-            alert("Please enter one or more image URLs.");
+            showWarning("Please enter one or more image URLs.");
             return; // Exit if input is empty
         }
         if (!property) return; // Exit if property data isn't loaded
@@ -178,7 +222,7 @@ function PropertyDetail() {
             .filter(url => url && url.length > 5); // Basic filter for non-empty strings
 
         if (parsedNewUrls.length === 0) {
-             alert("No valid URLs found in the input.");
+             showWarning("No valid URLs found in the input.");
              return; // Exit if parsing results in empty array
         }
 
@@ -198,7 +242,7 @@ function PropertyDetail() {
 
         // Provide feedback if no genuinely new URLs were added
         if (addedCount === 0) {
-            alert("All entered URLs are already associated with this property.");
+            showWarning("All entered URLs are already associated with this property.");
             setNewImageUrlsString(''); // Clear input even if nothing new added
             return;
         }
@@ -209,19 +253,47 @@ function PropertyDetail() {
 
         // Clear the input field after successful addition
         setNewImageUrlsString('');
-        alert(`${addedCount} new image URL(s) added!`); // Success feedback
+        showSuccess(`${addedCount} new image URL(s) added!`); // Success feedback
     }; // End handleAddImages
 
     const handleDeleteProperty = async () => {
-        if (window.confirm('Are you sure you want to delete this property?')) {
+        const confirmed = await showConfirm({
+            title: "Delete Property",
+            message: "Are you sure you want to delete this property? This action cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            type: "danger"
+        });
+        
+        if (confirmed) {
             try {
                 await deleteProperty(property.id);
-                alert('Property deleted successfully!');
+                showSuccess('Property deleted successfully!');
                 navigate('/properties'); // Redirect to properties list after deletion
             } catch (error) {
                 console.error('Error deleting property:', error);
-                alert('Failed to delete property.');
+                showError('Failed to delete property.');
             }
+        }
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (property) {
+            console.log('PropertyDetail: Changing status from', property.status, 'to', newStatus);
+            
+            // Update local state immediately for instant UI feedback
+            setProperty(prevProperty => ({
+                ...prevProperty,
+                status: newStatus,
+                statusHistory: [...(prevProperty.statusHistory || []), {
+                    status: newStatus,
+                    date: new Date().toISOString(),
+                    notes: null
+                }]
+            }));
+            
+            // Then update the context in the background
+            updatePropertyStatus(property.id, newStatus);
         }
     };
 
@@ -318,6 +390,15 @@ function PropertyDetail() {
                             {(calculatedScore !== null && calculatedScore !== undefined) ? calculatedScore : '--'}
                         </span>
                     </div>
+                    {/* Property Status */}
+                    <div className="detail-item status-display">
+                        <strong>Status:</strong>
+                        <StatusSelector
+                            currentStatus={property.status}
+                            onStatusChange={handleStatusChange}
+                            size="small"
+                        />
+                    </div>
                     {/* Notes */}
                     <div className="detail-notes">
                         <h3>Notes / Red Flags</h3>
@@ -373,6 +454,17 @@ function PropertyDetail() {
                  </div>
             )}
             {/* --- End Score Breakdown Section --- */}
+
+            {/* --- Status History Section --- */}
+            {property.statusHistory && property.statusHistory.length > 0 && (
+                <div className="detail-section status-history-section">
+                    <StatusHistory statusHistory={property.statusHistory} />
+                </div>
+            )}
+            {/* --- End Status History Section --- */}
+
+            {/* Confirmation Dialog */}
+            <ConfirmDialog {...confirmDialog} />
 
         </div> // End property-detail-container
     );

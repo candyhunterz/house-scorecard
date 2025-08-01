@@ -1,5 +1,6 @@
 // src/contexts/CriteriaContext.jsx
 import React, { createContext, useState, useContext, useMemo, useCallback, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 // Define allowed rating types as constants for better maintainability
 export const RATING_TYPE_STARS = 'stars';
@@ -18,23 +19,12 @@ const CriteriaContext = createContext();
 export function CriteriaProvider({ children }) {
   // State holding the array of all criteria objects
   const [criteria, setCriteria] = useState([]);
-
-  const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('accessToken');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  }, []);
+  const { authenticatedFetch } = useAuth();
 
   useEffect(() => {
     const fetchCriteria = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        console.log("No access token found, skipping criteria fetch.");
-        return;
-      }
       try {
-        const response = await fetch(getApiUrl('/criteria/'), {
-          headers: getAuthHeaders(),
-        });
+        const response = await authenticatedFetch(getApiUrl('/criteria/'));
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
@@ -45,8 +35,10 @@ export function CriteriaProvider({ children }) {
       }
     };
 
-    fetchCriteria();
-  }, [getAuthHeaders]);
+    if (authenticatedFetch) {
+      fetchCriteria();
+    }
+  }, [authenticatedFetch]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 
@@ -98,11 +90,10 @@ export function CriteriaProvider({ children }) {
     };
 
     try {
-      const response = await fetch(getApiUrl('/criteria/'), {
+      const response = await authenticatedFetch(getApiUrl('/criteria/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify(criterionToAdd),
       });
@@ -115,15 +106,14 @@ export function CriteriaProvider({ children }) {
       console.error('Failed to add criterion:', error);
     }
 
-  }, []); // Depends only on setCriteria (stable)
+  }, [authenticatedFetch]); // Depends on authenticatedFetch
 
   /** Deletes a criterion from the state by its ID */
   const deleteCriterion = useCallback(async (id) => {
     console.log(`CONTEXT: deleteCriterion called for ID: ${id}`);
     try {
-      const response = await fetch(getApiUrl(`/criteria/${id}/`), {
+      const response = await authenticatedFetch(getApiUrl(`/criteria/${id}/`), {
         method: 'DELETE',
-        headers: getAuthHeaders(),
       });
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -132,7 +122,7 @@ export function CriteriaProvider({ children }) {
     } catch (error) {
       console.error('Failed to delete criterion:', error);
     }
-  }, []); // Depends only on setCriteria
+  }, [authenticatedFetch]); // Depends on authenticatedFetch
 
   /** Updates an existing criterion in the state */
   const updateCriterion = useCallback(async (id, updatedData) => {
@@ -187,11 +177,10 @@ export function CriteriaProvider({ children }) {
      const updatedCriterion = { ...criterionToUpdate, ...updatedData };
 
      try {
-      const response = await fetch(getApiUrl(`/criteria/${id}/`), {
+      const response = await authenticatedFetch(getApiUrl(`/criteria/${id}/`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify(updatedCriterion),
       });
@@ -205,7 +194,7 @@ export function CriteriaProvider({ children }) {
     } catch (error) {
       console.error('Failed to update criterion:', error);
     }
-  }, [criteria]); // Depends only on setCriteria
+  }, [criteria, authenticatedFetch]); // Depends on criteria and authenticatedFetch
 
 
   // --- Memoize Derived Lists (using useMemo for stable references) ---

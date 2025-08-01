@@ -1,5 +1,7 @@
 // src/contexts/PropertyContext.jsx
 import React, { createContext, useState, useContext, useCallback, useMemo, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { PROPERTY_STATUSES } from '../constants/propertyStatus';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -12,35 +14,53 @@ const PropertyContext = createContext();
 export function PropertyProvider({ children }) {
   // State holding the array of all property objects
   const [properties, setProperties] = useState([]);
-
-    const getAuthHeaders = useCallback(() => {
-      const token = localStorage.getItem('accessToken');
-      return token ? { 'Authorization': `Bearer ${token}` } : {};
-    }, []);
+  const { authenticatedFetch } = useAuth();
 
     useEffect(() => {
       const fetchProperties = async () => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          console.log("No access token found, skipping property fetch.");
-          return;
-        }
         try {
-          const response = await fetch(getApiUrl('/properties/'), {
-            headers: getAuthHeaders(),
-          });
+          const response = await authenticatedFetch(getApiUrl('/properties/'));
           if (!response.ok) {
             throw new Error('Network response was not ok');
           }
           const data = await response.json();
-          setProperties(data);
+          
+          // Ensure all properties have required frontend fields with defaults
+          const propertiesWithDefaults = data.map(property => ({
+            ...property,
+            // Status fields (now supported by backend)
+            status: property.status !== undefined ? property.status : PROPERTY_STATUSES.UNSET,
+            statusHistory: Array.isArray(property.statusHistory) ? property.statusHistory : [],
+            // Ensure other frontend fields exist
+            ratings: property.ratings || {},
+            score: property.score !== undefined ? property.score : null,  
+            imageUrls: Array.isArray(property.imageUrls) ? property.imageUrls : []
+          }));
+          
+          console.log('CONTEXT: Properties loaded from backend:', propertiesWithDefaults);
+          setProperties(propertiesWithDefaults);
+          // Keep localStorage as backup
+          localStorage.setItem('houseScorecard_properties', JSON.stringify(propertiesWithDefaults));
         } catch (error) {
           console.error('Failed to fetch properties:', error);
+          // Fallback to localStorage if backend fails
+          const savedProperties = localStorage.getItem('houseScorecard_properties');
+          if (savedProperties) {
+            try {
+              const parsedProperties = JSON.parse(savedProperties);
+              console.log('CONTEXT: Fallback - loading properties from localStorage:', parsedProperties);
+              setProperties(parsedProperties);
+            } catch (parseError) {
+              console.error('Failed to parse saved properties:', parseError);
+            }
+          }
         }
       };
 
-      fetchProperties();
-    }, [getAuthHeaders]);
+      if (authenticatedFetch) {
+        fetchProperties();
+      }
+    }, [authenticatedFetch]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 
@@ -79,57 +99,254 @@ export function PropertyProvider({ children }) {
         imageUrls: imageUrlsArray,
         // Defaults for new properties
         ratings: {},
-        score: null
+        score: null,
+        status: PROPERTY_STATUSES.UNSET, // No default status - user must set
+        statusHistory: [] // Empty history until user sets first status
     };
 
     try {
-      const response = await fetch(getApiUrl('/properties/'), {
+      // Create backend payload (backend now fully supports all fields)
+      const backendProperty = {
+        address: propertyWithId.address,
+        listingUrl: propertyWithId.listingUrl,
+        price: propertyWithId.price,
+        beds: propertyWithId.beds,
+        baths: propertyWithId.baths,
+        sqft: propertyWithId.sqft,
+        notes: propertyWithId.notes,
+        latitude: propertyWithId.latitude,
+        longitude: propertyWithId.longitude,
+        imageUrls: propertyWithId.imageUrls,
+        status: propertyWithId.status,
+        statusHistory: propertyWithId.statusHistory,
+        score: propertyWithId.score
+      };
+
+      const response = await authenticatedFetch(getApiUrl('/properties/'), {
         method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders(),
-          },
-          body: JSON.stringify(propertyWithId),
-        });
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendProperty),
+      });
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
       const savedProperty = await response.json();
-      setProperties(prevProperties => [...prevProperties, savedProperty]);
+      // Ensure saved property has all frontend fields
+      const savedPropertyWithDefaults = {
+        ...savedProperty,
+        status: savedProperty.status !== undefined ? savedProperty.status : PROPERTY_STATUSES.UNSET,
+        statusHistory: Array.isArray(savedProperty.statusHistory) ? savedProperty.statusHistory : [],
+        ratings: savedProperty.ratings || {},
+        score: savedProperty.score !== undefined ? savedProperty.score : null,
+        imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : []
+      };
+      
+      setProperties(prevProperties => {
+        const newProperties = [...prevProperties, savedPropertyWithDefaults];
+        // Save updated properties to localStorage
+        localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
+        return newProperties;
+      });
     } catch (error) {
       console.error('Failed to add property:', error);
     }
-  }, []); // Depends only on setProperties (stable)
+  }, [authenticatedFetch]); // Depends on authenticatedFetch
 
   /** Retrieves a property by its ID */
-  const getPropertyById = useCallback((id) => {
-    console.log(`CONTEXT: getPropertyById called for ID: ${id}`);
+  const getPropertyById = (id) => {
     const numId = parseInt(id, 10);
-    // Find returns undefined if not found, which is handled in consuming components
-    return properties.find(p => p.id === numId);
-  }, [properties]); // Re-memoize only if the 'properties' array reference changes
+    const foundProperty = properties.find(p => p.id === numId);
+    return foundProperty;
+  };
 
   /** Updates the ratings and calculated score for a specific property */
   const updatePropertyRatingsAndScore = useCallback(async (propertyId, newRatings, newScore) => {
-    console.log(`CONTEXT: updatePropertyRatingsAndScore called for ID: ${propertyId}`);
     
     const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
     if (!propertyToUpdate) return;
 
-    const updatedProperty = { ...propertyToUpdate, ratings: newRatings, score: newScore };
+    // Update local state immediately with ratings and score
+    const updatedProperty = { 
+      ...propertyToUpdate, 
+      ratings: newRatings,
+      score: newScore 
+    };
 
+    setProperties(prevProperties => {
+      const newProperties = prevProperties.map(prop => 
+        prop.id === parseInt(propertyId, 10) ? updatedProperty : prop
+      );
+      
+      // Save updated properties to localStorage
+      localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
+      console.log(`CONTEXT: Property ${propertyId} ratings and score updated locally`);
+      
+      return newProperties;
+    });
+
+    // Sync with backend (attempt ratings and score sync with graceful fallback)
     try {
-      const response = await fetch(getApiUrl(`/properties/${propertyId}/`), {
+      // First, save each rating via the Rating API (this should work)
+      for (const [criterionId, value] of Object.entries(newRatings)) {
+        try {
+          // Convert frontend value format to backend format
+          let backendValue = value;
+          if (typeof value === 'boolean') {
+            backendValue = value ? 'yes' : 'no';
+          } else if (typeof value === 'number') {
+            backendValue = value.toString();
+          }
+
+          // Check if rating already exists
+          const existingRatingResponse = await authenticatedFetch(getApiUrl(`/ratings/?property=${propertyId}&criterion=${criterionId}`));
+          
+          if (existingRatingResponse.ok) {
+            const existingRatings = await existingRatingResponse.json();
+            
+            // Find the specific rating for this property-criterion combination
+            const matchingRating = existingRatings.find(r => 
+              r.property === parseInt(propertyId, 10) && r.criterion === parseInt(criterionId, 10)
+            );
+            
+            if (matchingRating) {
+              // Update existing rating
+              await authenticatedFetch(getApiUrl(`/ratings/${matchingRating.id}/`), {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  property: parseInt(propertyId, 10),
+                  criterion: parseInt(criterionId, 10),
+                  value: backendValue
+                }),
+              });
+            } else {
+              // Create new rating
+              await authenticatedFetch(getApiUrl(`/ratings/`), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  property: parseInt(propertyId, 10),
+                  criterion: parseInt(criterionId, 10),
+                  value: backendValue
+                }),
+              });
+            }
+          }
+        } catch (ratingError) {
+          console.warn(`Failed to save rating for criterion ${criterionId}:`, ratingError);
+        }
+      }
+
+      // Update the property score (fully supported by backend)
+      const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ score: newScore }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update property score: ${response.statusText}`);
+      }
+      
+      const savedProperty = await response.json();
+      console.log(`Property ${propertyId} score synced to backend: ${savedProperty.score}`);
+      
+      // Update state with backend response to ensure consistency
+      setProperties(prevProperties =>
+        prevProperties.map(prop => 
+          prop.id === parseInt(propertyId, 10) ? {
+            ...savedProperty,
+            // Ensure frontend field compatibility
+            statusHistory: Array.isArray(savedProperty.statusHistory) ? savedProperty.statusHistory : [],
+            ratings: savedProperty.ratings || {},
+            imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : []
+          } : prop
+        )
+      );
+
+    } catch (error) {
+      console.warn('Failed to sync ratings with backend:', error);
+    }
+    
+    /*
+    // Original backend sync code
+    try {
+      // First, save each rating via the Rating API
+      for (const [criterionId, value] of Object.entries(newRatings)) {
+        // Convert frontend value format to backend format
+        let backendValue = value;
+        if (typeof value === 'boolean') {
+          backendValue = value ? 'yes' : 'no';
+        } else if (typeof value === 'number') {
+          backendValue = value.toString();
+        }
+
+        // Check if rating already exists
+        try {
+          const existingRatingResponse = await authenticatedFetch(getApiUrl(`/ratings/?property=${propertyId}&criterion=${criterionId}`));
+          
+          if (existingRatingResponse.ok) {
+            const existingRatings = await existingRatingResponse.json();
+            
+            // Find the specific rating for this property-criterion combination
+            const matchingRating = existingRatings.find(r => 
+              r.property === parseInt(propertyId, 10) && r.criterion === parseInt(criterionId, 10)
+            );
+            
+            if (matchingRating) {
+              // Update existing rating
+              await authenticatedFetch(getApiUrl(`/ratings/${matchingRating.id}/`), {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  property: parseInt(propertyId, 10),
+                  criterion: parseInt(criterionId, 10),
+                  value: backendValue
+                }),
+              });
+            } else {
+              // Create new rating
+              await authenticatedFetch(getApiUrl(`/ratings/`), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  property: parseInt(propertyId, 10),
+                  criterion: parseInt(criterionId, 10),
+                  value: backendValue
+                }),
+              });
+            }
+          }
+        } catch (ratingError) {
+          console.error(`Failed to save rating for criterion ${criterionId}:`, ratingError);
+        }
+      }
+
+      // Then update the property score
+      const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/`), {
         method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders(),
-          },
-          body: JSON.stringify(updatedProperty),
-        });
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedProperty),
+      });
+      
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
+      
       const savedProperty = await response.json();
       setProperties(prevProperties =>
         prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
@@ -137,7 +354,8 @@ export function PropertyProvider({ children }) {
     } catch (error) {
       console.error('Failed to update property:', error);
     }
-  }, [properties]); // Depends only on setProperties
+    */
+  }, [properties]); // Only depend on properties
 
   /** Updates only the imageUrls array for a specific property */
   const updatePropertyImages = useCallback(async (propertyId, newImageUrlsArray) => {
@@ -154,11 +372,10 @@ export function PropertyProvider({ children }) {
       const updatedProperty = { ...propertyToUpdate, imageUrls: newImageUrlsArray };
 
       try {
-        const response = await fetch(getApiUrl(`/properties/${propertyId}/`), {
+        const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            ...getAuthHeaders(),
           },
           body: JSON.stringify(updatedProperty),
         });
@@ -172,16 +389,15 @@ export function PropertyProvider({ children }) {
       } catch (error) {
         console.error('Failed to update property images:', error);
       }
-  }, [properties]); // Depends only on setProperties
+  }, [properties, authenticatedFetch]); // Depends on properties and authenticatedFetch
 
 
   /** Deletes a property by its ID */
   const deleteProperty = useCallback(async (id) => {
     console.log(`CONTEXT: deleteProperty called for ID: ${id}`);
     try {
-      const response = await fetch(getApiUrl(`/properties/${id}/`), {
+      const response = await authenticatedFetch(getApiUrl(`/properties/${id}/`), {
         method: 'DELETE',
-        headers: getAuthHeaders(),
       });
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -190,17 +406,16 @@ export function PropertyProvider({ children }) {
     } catch (error) {
       console.error('Failed to delete property:', error);
     }
-  }, [getAuthHeaders]);
+  }, [authenticatedFetch]);
 
   /** Updates an existing property in the state */
   const updateProperty = useCallback(async (id, updatedData) => {
     console.log(`CONTEXT: updateProperty called for ID: ${id}`, updatedData);
     try {
-      const response = await fetch(getApiUrl(`/properties/${id}/`), {
+      const response = await authenticatedFetch(getApiUrl(`/properties/${id}/`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify(updatedData),
       });
@@ -214,7 +429,118 @@ export function PropertyProvider({ children }) {
     } catch (error) {
       console.error('Failed to update property:', error);
     }
-  }, [getAuthHeaders]);
+  }, [authenticatedFetch]);
+
+  /** Updates the status of a specific property and adds to status history */
+  const updatePropertyStatus = useCallback(async (propertyId, newStatus, notes = null) => {
+    const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
+    if (!propertyToUpdate) {
+      console.error(`Property with ID ${propertyId} not found`);
+      return;
+    }
+
+    // Create status history entry
+    const statusHistoryEntry = {
+      status: newStatus,
+      date: new Date().toISOString(),
+      notes: notes || (propertyToUpdate.status === PROPERTY_STATUSES.UNSET ? 'Initial status set' : null)
+    };
+
+    const updatedProperty = {
+      ...propertyToUpdate,
+      status: newStatus,
+      statusHistory: [...(propertyToUpdate.statusHistory || []), statusHistoryEntry]
+    };
+
+    // Update local state immediately for responsive UI
+    setProperties(prevProperties => {
+      const newProperties = prevProperties.map(p =>
+        p.id === parseInt(propertyId, 10) ? updatedProperty : p
+      );
+      console.log(`CONTEXT: Properties updated. Property ${propertyId} now has status:`, 
+        newProperties.find(p => p.id === parseInt(propertyId, 10))?.status);
+      
+      // Save updated properties to localStorage
+      localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
+      
+      return newProperties;
+    });
+
+    // Sync with backend (full status and statusHistory support)
+    try {
+      const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status: newStatus,
+          statusHistory: updatedProperty.statusHistory 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update property status: ${response.statusText}`);
+      }
+
+      const savedProperty = await response.json();
+      console.log(`Property ${propertyId} status and history synced to backend:`, savedProperty.status);
+      
+      // Update state with backend response to ensure consistency
+      setProperties(prevProperties =>
+        prevProperties.map(p =>
+          p.id === parseInt(propertyId, 10) ? {
+            ...savedProperty,
+            // Ensure frontend field compatibility
+            statusHistory: Array.isArray(savedProperty.statusHistory) ? savedProperty.statusHistory : [],
+            ratings: savedProperty.ratings || {},
+            imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : []
+          } : p
+        )
+      );
+    } catch (error) {
+      console.error('Failed to sync status with backend:', error);
+      // Status update UI feedback is already shown, but backend sync failed
+      // Could add error toast here if needed
+    }
+    
+    /*
+    // Full backend sync code (for when statusHistory is supported)
+    try {
+      const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/`), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          statusHistory: updatedProperty.statusHistory
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update property status');
+      }
+
+      const savedProperty = await response.json();
+      console.log(`CONTEXT: Backend returned property:`, savedProperty);
+      console.log(`CONTEXT: Backend property status:`, savedProperty.status);
+      
+      // Update with server response to ensure consistency
+      setProperties(prevProperties =>
+        prevProperties.map(p =>
+          p.id === parseInt(propertyId, 10) ? savedProperty : p
+        )
+      );
+      
+      console.log(`CONTEXT: Property ${propertyId} status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Failed to update property status:', error);
+      // Local state is already updated, so user sees immediate feedback
+      // Could add error handling here if needed
+    }
+    */
+  }, [authenticatedFetch, properties]);
 
   // --- Memoize the context value object itself ---
   // Bundles all state and functions provided by the context
@@ -226,9 +552,10 @@ export function PropertyProvider({ children }) {
     updatePropertyImages,          // Memoized function
     deleteProperty,                // Memoized function
     updateProperty,                // Memoized function
+    updatePropertyStatus,          // Memoized function
   }), [
       properties, // Re-memoize value object if properties array changes
-      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty // Include stable functions
+      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty, updatePropertyStatus // Include stable functions
   ]);
 
 
