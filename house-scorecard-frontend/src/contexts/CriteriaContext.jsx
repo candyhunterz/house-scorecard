@@ -26,6 +26,11 @@ export function CriteriaProvider({ children }) {
 
   useEffect(() => {
     const fetchCriteria = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.log("No access token found, skipping criteria fetch.");
+        return;
+      }
       try {
         const response = await fetch(getApiUrl('/criteria/'), {
           headers: getAuthHeaders(),
