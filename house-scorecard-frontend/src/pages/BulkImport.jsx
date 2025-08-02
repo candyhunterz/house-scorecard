@@ -14,7 +14,7 @@ function BulkImport() {
   const [importResult, setImportResult] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-  const { addToast } = useToast();
+  const { showToast } = useToast();
 
   // Available property fields
   const propertyFields = [
@@ -32,7 +32,7 @@ function BulkImport() {
     const selectedFile = event.target.files[0];
     if (selectedFile) {
       if (!selectedFile.name.endsWith('.csv')) {
-        addToast('Please select a CSV file', 'error');
+        showToast('Please select a CSV file', 'error');
         return;
       }
       setFile(selectedFile);
@@ -51,7 +51,7 @@ function BulkImport() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/properties/preview_csv/`, {
         method: 'POST',
         headers: {
@@ -73,7 +73,7 @@ function BulkImport() {
       
     } catch (error) {
       console.error('Preview failed:', error);
-      addToast('Failed to preview CSV file', 'error');
+      showToast('Failed to preview CSV file', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -94,7 +94,7 @@ function BulkImport() {
       formData.append('file', file);
       formData.append('mapping', JSON.stringify(fieldMappings));
 
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/properties/bulk_import/`, {
         method: 'POST',
         headers: {
@@ -112,7 +112,7 @@ function BulkImport() {
       setStep(3);
 
       if (result.success) {
-        addToast(
+        showToast(
           `Import completed! Created ${result.created}, updated ${result.updated} properties`,
           'success'
         );
@@ -120,7 +120,7 @@ function BulkImport() {
       
     } catch (error) {
       console.error('Import failed:', error);
-      addToast('Failed to import properties', 'error');
+      showToast('Failed to import properties', 'error');
     } finally {
       setIsUploading(false);
     }

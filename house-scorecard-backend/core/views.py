@@ -5,6 +5,7 @@ from django.db import transaction
 import csv
 import io
 import re
+import json
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from .models import Property, Criterion, Rating
@@ -29,7 +30,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
         """
         try:
             csv_file = request.FILES.get('file')
-            field_mapping = request.data.get('mapping', {})
+            field_mapping_str = request.data.get('mapping', '{}')
+            field_mapping = json.loads(field_mapping_str)
             
             if not csv_file:
                 return Response(
