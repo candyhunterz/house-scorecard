@@ -8,6 +8,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import Properties from './pages/Properties';
 import Compare from './pages/Compare';
 import Criteria from './pages/Criteria';
 import MapPage from './pages/MapPage';
@@ -102,8 +103,9 @@ function AppLayout() {
       <main className="main-content-area">
         <Routes>
           {/* Protected Routes */}
-          <Route path="/" element={<Navigate replace to="/properties" />} />
-          <Route path="/properties" element={<Dashboard />} />
+          <Route path="/" element={<Navigate replace to="/dashboard" />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/properties" element={<Properties />} />
           <Route path="/properties/:propertyId" element={<PropertyDetail />} />
           <Route path="/edit-property/:propertyId" element={<EditProperty />} />
           <Route path="/add-property" element={<AddProperty />} />

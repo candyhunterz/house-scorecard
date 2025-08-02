@@ -1,234 +1,351 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useMemo } from 'react'; // Added useMemo
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PropertyCard from '../components/PropertyCard';
-import SearchAndFilter from '../components/SearchAndFilter';
 import { useProperties } from '../contexts/PropertyContext';
 import { useCriteria } from '../contexts/CriteriaContext';
-import './Dashboard.css'; // Ensure styles are imported
+import { PROPERTY_STATUSES } from '../constants/propertyStatus';
+import './Dashboard.css';
 
 function Dashboard() {
-  // Get properties from context
   const { properties } = useProperties();
-  const { mustHaves, dealBreakers } = useCriteria();
+  const { mustHaves, niceToHaves, dealBreakers } = useCriteria();
   const navigate = useNavigate();
 
-  // --- State for Sorting and Filtering ---
-  const [sortBy, setSortBy] = useState('score_desc'); // Initial sort: Score Descending
-  const [searchText, setSearchText] = useState('');   // Search text
-  const [filters, setFilters] = useState({
-    minPrice: null,
-    maxPrice: null,
-    minScore: null,
-    maxScore: null,
-    minBeds: null,
-    maxBeds: null,
-    minBaths: null,
-    maxBaths: null,
-    minSqft: null,
-    maxSqft: null,
-    mustHavesMet: null,
-    dealBreakersPresent: null,
-    statuses: []
-  });
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = properties.length;
+    const statusCounts = Object.values(PROPERTY_STATUSES).reduce((acc, status) => {
+      acc[status] = properties.filter(p => p.status === status).length;
+      return acc;
+    }, {});
 
-  // --- Event Handlers ---
-  const handleSortChange = (newSortBy) => {
-    setSortBy(newSortBy);
+    const ratedProperties = properties.filter(p => 
+      Object.keys(p.ratings || {}).length > 0
+    );
+
+    const averageScore = ratedProperties.length > 0 
+      ? Math.round(ratedProperties.reduce((sum, p) => sum + (p.score || 0), 0) / ratedProperties.length)
+      : 0;
+
+    const topProperties = [...properties]
+      .filter(p => p.score !== null && p.score !== undefined)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 3);
+
+    const criteriaSetup = mustHaves.length + niceToHaves.length + dealBreakers.length > 0;
+    const needsRating = properties.filter(p => Object.keys(p.ratings || {}).length === 0).length;
+
+    return {
+      total,
+      statusCounts,
+      averageScore,
+      topProperties,
+      ratedProperties: ratedProperties.length,
+      criteriaSetup,
+      needsRating
+    };
+  }, [properties, mustHaves, niceToHaves, dealBreakers]);
+
+  const getProgressStep = () => {
+    if (!stats.criteriaSetup) return 1;
+    if (stats.total === 0) return 2;
+    if (stats.needsRating > 0) return 3;
+    return 4;
   };
 
-  const handleSearchChange = (newSearchText) => {
-    setSearchText(newSearchText);
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case PROPERTY_STATUSES.INTERESTED:
+        return { label: 'Interested', icon: 'fas fa-heart', color: '#10b981' };
+      case PROPERTY_STATUSES.VIEWING_SCHEDULED:
+        return { label: 'Viewing Scheduled', icon: 'fas fa-calendar-check', color: '#3b82f6' };
+      case PROPERTY_STATUSES.OFFER_MADE:
+        return { label: 'Offer Made', icon: 'fas fa-handshake', color: '#f59e0b' };
+      case PROPERTY_STATUSES.PASSED:
+        return { label: 'Passed', icon: 'fas fa-times-circle', color: '#ef4444' };
+      default:
+        return { label: 'Unset', icon: 'fas fa-circle', color: '#6b7280' };
+    }
   };
-
-  const handleFiltersChange = (newFilters) => {
-    setFilters(newFilters);
-  };
-
-  const handleClearFilters = () => {
-    setSearchText('');
-    setFilters({
-      minPrice: null,
-      maxPrice: null,
-      minScore: null,
-      maxScore: null,
-      minBeds: null,
-      maxBeds: null,
-      minBaths: null,
-      maxBaths: null,
-      minSqft: null,
-      maxSqft: null,
-      mustHavesMet: null,
-      dealBreakersPresent: null,
-      statuses: []
-    });
-  };
-
-  const handleAddPropertyClick = () => { navigate('/add-property'); };
-  const handleCardClick = (propertyId) => { navigate(`/properties/${propertyId}`); };
-  const handleSettingsClick = () => { navigate('/settings'); };
-
-  // Helper function to check if property meets criteria requirements
-  const checkCriteriaStatus = (property) => {
-    const ratings = property.ratings || {};
-    
-    // Check must-haves
-    const mustHavesMet = mustHaves.length === 0 || mustHaves.every(mh => ratings[mh.id] === true);
-    
-    // Check deal-breakers
-    const hasDealBreakers = dealBreakers.some(db => ratings[db.id] === true);
-    
-    return { mustHavesMet, hasDealBreakers };
-  };
-
-  // --- Filtering and Sorting Logic ---
-  // Use useMemo to avoid recalculating on every render unless properties, filter, or sort changes
-  const filteredAndSortedProperties = useMemo(() => {
-    console.log("Filtering/Sorting Properties...");
-
-    // 1. Filter
-    const lowerCaseSearch = searchText.toLowerCase();
-    const filtered = properties.filter(prop => {
-      // Text search: checks address and notes (case-insensitive)
-      const matchesSearch = !searchText || (
-        prop.address?.toLowerCase().includes(lowerCaseSearch) ||
-        prop.notes?.toLowerCase().includes(lowerCaseSearch)
-      );
-      
-      if (!matchesSearch) return false;
-      
-      // Price filters
-      if (filters.minPrice && (prop.price === null || prop.price < filters.minPrice)) return false;
-      if (filters.maxPrice && (prop.price === null || prop.price > filters.maxPrice)) return false;
-      
-      // Score filters
-      if (filters.minScore && (prop.score === null || prop.score < filters.minScore)) return false;
-      if (filters.maxScore && (prop.score === null || prop.score > filters.maxScore)) return false;
-      
-      // Bedroom filters
-      if (filters.minBeds && (prop.beds === null || prop.beds < filters.minBeds)) return false;
-      if (filters.maxBeds && (prop.beds === null || prop.beds > filters.maxBeds)) return false;
-      
-      // Bathroom filters
-      if (filters.minBaths && (prop.baths === null || prop.baths < filters.minBaths)) return false;
-      if (filters.maxBaths && (prop.baths === null || prop.baths > filters.maxBaths)) return false;
-      
-      // Square footage filters
-      if (filters.minSqft && (prop.sqft === null || prop.sqft < filters.minSqft)) return false;
-      if (filters.maxSqft && (prop.sqft === null || prop.sqft > filters.maxSqft)) return false;
-      
-      // Criteria-based filters
-      const { mustHavesMet, hasDealBreakers } = checkCriteriaStatus(prop);
-      
-      if (filters.mustHavesMet && !mustHavesMet) return false;
-      if (filters.dealBreakersPresent === false && hasDealBreakers) return false;
-      
-      // Status filters
-      if (filters.statuses && filters.statuses.length > 0) {
-        const propStatus = prop.status; // Keep as null if unset
-        if (!filters.statuses.includes(propStatus)) return false;
-      }
-      
-      return true;
-    });
-
-    // 2. Sort
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'score_desc':
-          // Handle null scores (treat null as lowest)
-          return (b.score ?? -1) - (a.score ?? -1);
-        case 'score_asc':
-          return (a.score ?? -1) - (b.score ?? -1);
-        case 'price_desc':
-          return (b.price ?? 0) - (a.price ?? 0);
-        case 'price_asc':
-          return (a.price ?? 0) - (b.price ?? 0);
-        case 'address_asc':
-          return (a.address || '').localeCompare(b.address || '');
-        case 'address_desc':
-            return (b.address || '').localeCompare(a.address || '');
-        // Add date added sort later if timestamp exists
-        default:
-          return 0; // No sorting or default
-      }
-    });
-
-    return sorted;
-
-  }, [properties, searchText, filters, sortBy, mustHaves, dealBreakers]); // Dependencies for recalculation
-
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-page">
       {/* Header */}
-      <header className="dashboard-header">
-        <h1>My Properties</h1>
-        <div className="dashboard-actions">
-           {/* Settings Icon */}
-           <i className="fas fa-cog settings-icon" title="Settings" onClick={handleSettingsClick}></i>
-        </div>
+      <header className="dashboard-page-header">
+        <h1>Dashboard</h1>
+        <p>Welcome to your House Scorecard dashboard</p>
       </header>
-      
-      {/* Search and Filter Component */}
-      <SearchAndFilter
-        searchText={searchText}
-        onSearchChange={handleSearchChange}
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        sortBy={sortBy}
-        onSortChange={handleSortChange}
-        onClearFilters={handleClearFilters}
-        resultCount={filteredAndSortedProperties.length}
-        totalCount={properties.length}
-      />
 
+      {/* Quick Stats */}
+      <section className="stats-section">
+        <h2>Quick Stats</h2>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-home"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{stats.total}</h3>
+              <p>Total Properties</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-star"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{stats.averageScore || '--'}</h3>
+              <p>Average Score</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-check-circle"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{stats.ratedProperties}</h3>
+              <p>Rated Properties</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <i className="fas fa-heart"></i>
+            </div>
+            <div className="stat-content">
+              <h3>{stats.statusCounts[PROPERTY_STATUSES.INTERESTED] || 0}</h3>
+              <p>Interested</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* --- Property List --- */}
-      <div className="property-list">
-        {/* Render message or the filtered/sorted list */}
-        {filteredAndSortedProperties.length === 0 ? (
-          <div className="no-properties-message">
-            {properties.length === 0 ? (
-              <div className="empty-state">
-                <i className="fas fa-home empty-icon"></i>
-                <h3>No properties yet</h3>
-                <p>Click the '+' button to add your first visited house!</p>
+      {/* Getting Started Guide */}
+      <section className="getting-started-section">
+        <h2>Getting Started</h2>
+        <div className="progress-steps">
+          <div className={`step ${getProgressStep() >= 1 ? 'active' : ''} ${stats.criteriaSetup ? 'completed' : ''}`}>
+            <div className="step-number">1</div>
+            <div className="step-content">
+              <h3>Set up your criteria</h3>
+              <p>Define what matters most in your property search</p>
+              {!stats.criteriaSetup && (
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate('/criteria')}
+                >
+                  Set up criteria
+                </button>
+              )}
+              {stats.criteriaSetup && (
+                <div className="step-completed">
+                  <i className="fas fa-check"></i>
+                  <span>Completed</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`step ${getProgressStep() >= 2 ? 'active' : ''} ${stats.total > 0 ? 'completed' : ''}`}>
+            <div className="step-number">2</div>
+            <div className="step-content">
+              <h3>Add properties</h3>
+              <p>Start building your property list</p>
+              {stats.total === 0 && (
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate('/add-property')}
+                >
+                  Add first property
+                </button>
+              )}
+              {stats.total > 0 && (
+                <div className="step-completed">
+                  <i className="fas fa-check"></i>
+                  <span>{stats.total} properties added</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`step ${getProgressStep() >= 3 ? 'active' : ''} ${stats.needsRating === 0 && stats.total > 0 ? 'completed' : ''}`}>
+            <div className="step-number">3</div>
+            <div className="step-content">
+              <h3>Rate your properties</h3>
+              <p>Score properties against your criteria</p>
+              {stats.needsRating > 0 && (
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate('/properties')}
+                >
+                  Rate {stats.needsRating} properties
+                </button>
+              )}
+              {stats.needsRating === 0 && stats.total > 0 && (
+                <div className="step-completed">
+                  <i className="fas fa-check"></i>
+                  <span>All properties rated</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={`step ${getProgressStep() >= 4 ? 'active' : ''}`}>
+            <div className="step-number">4</div>
+            <div className="step-content">
+              <h3>Compare and decide</h3>
+              <p>Compare your top properties and make your choice</p>
+              {stats.ratedProperties >= 2 && (
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate('/compare')}
+                >
+                  Compare properties
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Actions */}
+      <section className="quick-actions-section">
+        <h2>Quick Actions</h2>
+        <div className="action-cards">
+          <button 
+            className="action-card"
+            onClick={() => navigate('/add-property')}
+          >
+            <i className="fas fa-plus"></i>
+            <span>Add Property</span>
+          </button>
+          
+          <button 
+            className="action-card"
+            onClick={() => navigate('/properties')}
+          >
+            <i className="fas fa-list"></i>
+            <span>View All Properties</span>
+          </button>
+          
+          <button 
+            className="action-card"
+            onClick={() => navigate('/compare')}
+          >
+            <i className="fas fa-balance-scale"></i>
+            <span>Compare Properties</span>
+          </button>
+          
+          <button 
+            className="action-card"
+            onClick={() => navigate('/criteria')}
+          >
+            <i className="fas fa-cog"></i>
+            <span>Manage Criteria</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Top Properties */}
+      {stats.topProperties.length > 0 && (
+        <section className="top-properties-section">
+          <h2>Top Scoring Properties</h2>
+          <div className="top-properties-list">
+            {stats.topProperties.map(property => (
+              <div 
+                key={property.id} 
+                className="top-property-item"
+                onClick={() => navigate(`/properties/${property.id}`)}
+              >
+                <div className="property-info">
+                  <h4>{property.address}</h4>
+                  <p>
+                    {property.beds} beds • {property.baths} baths
+                    {property.price && ` • $${property.price.toLocaleString()}`}
+                  </p>
+                </div>
+                <div className="property-score">
+                  <span className="score-badge">{property.score}</span>
+                </div>
               </div>
-            ) : (
-              <div className="no-results">
-                <i className="fas fa-search no-results-icon"></i>
-                <h3>No properties match your filters</h3>
-                <p>Try adjusting your search or filter criteria</p>
-                <button onClick={handleClearFilters} className="btn btn-secondary">
-                  Clear all filters
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Status Breakdown */}
+      {stats.total > 0 && (
+        <section className="status-breakdown-section">
+          <h2>Properties by Status</h2>
+          <div className="status-breakdown">
+            {Object.entries(stats.statusCounts).map(([status, count]) => {
+              if (count === 0) return null;
+              const config = getStatusConfig(status);
+              return (
+                <div key={status} className="status-item">
+                  <div className="status-info">
+                    <i className={config.icon} style={{ color: config.color }}></i>
+                    <span>{config.label}</span>
+                  </div>
+                  <span className="status-count">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Insights */}
+      {stats.total > 0 && (
+        <section className="insights-section">
+          <h2>Insights & Recommendations</h2>
+          <div className="insights-list">
+            {stats.needsRating > 0 && (
+              <div className="insight-item">
+                <i className="fas fa-star text-warning"></i>
+                <span>
+                  {stats.needsRating} {stats.needsRating === 1 ? 'property needs' : 'properties need'} rating
+                </span>
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => navigate('/properties')}
+                >
+                  Rate now
+                </button>
+              </div>
+            )}
+            
+            {!stats.criteriaSetup && (
+              <div className="insight-item">
+                <i className="fas fa-list-check text-info"></i>
+                <span>Set up your criteria to start rating properties effectively</span>
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => navigate('/criteria')}
+                >
+                  Set up
+                </button>
+              </div>
+            )}
+
+            {stats.ratedProperties >= 2 && (
+              <div className="insight-item">
+                <i className="fas fa-balance-scale text-success"></i>
+                <span>You have {stats.ratedProperties} rated properties ready to compare</span>
+                <button 
+                  className="btn btn-sm btn-outline"
+                  onClick={() => navigate('/compare')}
+                >
+                  Compare
                 </button>
               </div>
             )}
           </div>
-        ) : (
-          // Map over the derived list
-          filteredAndSortedProperties.map(property => (
-            <div
-              key={property.id}
-              className="property-card-wrapper"
-              onClick={() => handleCardClick(property.id)}
-              role="button"
-              tabIndex={0}
-              onKeyPress={(e) => e.key === 'Enter' && handleCardClick(property.id)}
-            >
-              <PropertyCard property={property} />
-            </div>
-          ))
-        )}
-      </div>
-      {/* --- End Property List --- */}
-
-
-      {/* Floating Action Button */}
-      <button className="fab" title="Add New Property" onClick={handleAddPropertyClick}>+</button>
-
-    </div> // End container
+        </section>
+      )}
+    </div>
   );
 }
 

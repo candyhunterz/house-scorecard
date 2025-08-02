@@ -1,30 +1,38 @@
 /* src/pages/MapPage.css */
 .map-page-container {
-    /* Allow map container to take available height */
+    padding: var(--space-6);
+    height: calc(100vh - 120px); /* Account for header and padding */
     display: flex;
     flex-direction: column;
-    height: 100%; /* Important: Needs height context from parent */
-    /* Or set a fixed height for the page container if needed */
-    /* e.g., height: calc(100vh - header_height - padding); */
-    padding: 0; /* Remove default padding if it interferes */
   }
   
   .map-page-container h1 {
     text-align: center;
-    margin-bottom: 20px;
-    color: #2c3e50;
-    padding: 0 20px; /* Add padding back for title */
-    flex-shrink: 0; /* Prevent title from shrinking */
+    margin-bottom: var(--space-4);
+    color: var(--color-text);
+    flex-shrink: 0;
   }
   
   /* Style the Map Container itself */
   .map-view {
-    flex-grow: 1; /* Make map take remaining vertical space */
-    height: 100%; /* Ensure it takes full height of its flex container */
+    flex: 1;
+    min-height: 400px;
     width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    z-index: 0; /* Ensure map is below other UI if needed */
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    z-index: 0;
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 767px) {
+    .map-page-container {
+      padding: var(--space-4);
+      height: calc(100vh - 100px);
+    }
+    
+    .map-view {
+      min-height: 300px;
+    }
   }
   
   /* Leaflet Popup Customization (Optional) */

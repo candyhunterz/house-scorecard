@@ -5,22 +5,13 @@ import { useProperties } from '../contexts/PropertyContext';
 import L from 'leaflet'; // Import Leaflet library itself for custom icons or bounds calculation
 import './MapPage.css'; // Create this CSS file next
 
-// Optional: Fix for default marker icon issue with bundlers like Vite/Webpack
-// import iconUrl from 'leaflet/dist/images/marker-icon.png';
-// import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-// import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
-
-// const DefaultIcon = L.icon({
-//     iconUrl,
-//     iconRetinaUrl,
-//     shadowUrl,
-//     iconSize:    [25, 41],
-//     iconAnchor:  [12, 41],
-//     popupAnchor: [1, -34],
-//     tooltipAnchor: [16, -28],
-//     shadowSize:  [41, 41]
-// });
-// L.Marker.prototype.options.icon = DefaultIcon;
+// Fix for default marker icon issue with bundlers like Vite/Webpack
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 // --- End Icon Fix ---
 
 

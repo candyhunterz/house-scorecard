@@ -1,182 +1,137 @@
-/* src/components/Sidebar.css */
-
-/* Mobile-first sidebar styles */
+/* Sidebar.css */
 .sidebar {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    /* Mobile styles handled by global.css - positioned as overlay */
-  }
-  
-  /* Close button for mobile */
-  .sidebar-close-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: var(--font-xl);
-    cursor: pointer;
-    padding: var(--space-2);
-    border-radius: 4px;
-    transition: background-color 0.2s;
-    margin-left: auto;
-  }
-  
-  .sidebar-close-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .sidebar-header {
-      padding: var(--space-3) 0;
-      margin-bottom: var(--space-5);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid rgba(236, 240, 241, 0.2);
-  }
-  
-  .sidebar-header h2 {
-      margin: 0;
-      font-size: var(--font-xl);
-      color: #ecf0f1;
-  }
-  
-  @media (min-width: 768px) {
-    .sidebar-header {
-      text-align: center;
-      justify-content: center;
-    }
-    
-    .sidebar-header h2 {
-      font-size: var(--font-2xl);
-    }
-  }
-  
-  .sidebar-nav {
-      flex-grow: 1; /* Takes available space */
-  }
-  
-  .sidebar-nav ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-  }
-  
-  .sidebar-nav li a {
-      display: block;
-      padding: var(--space-3) var(--space-5);
-      color: #bdc3c7;
-      text-decoration: none;
-      transition: background-color 0.2s, color 0.2s;
-      border-radius: 6px;
-      margin-bottom: var(--space-2);
-      font-size: var(--font-base);
-      /* Ensure minimum touch target */
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-  }
-  
-  .sidebar-nav li a:hover {
-      background-color: #34495e;
-      color: #ecf0f1; /* White on hover */
-  }
-  
-
-  
-  .sidebar-nav li a i {
-      margin-right: var(--space-3);
-      width: 20px;
-      text-align: center;
-      font-size: var(--font-base);
-  }
-  
-  .sidebar-footer {
-      margin-top: auto;
-      padding-top: var(--space-4);
-      border-top: 1px solid rgba(236, 240, 241, 0.2);
-  }
-  
-  .sidebar-footer a {
-       display: flex;
-       align-items: center;
-      padding: var(--space-3) var(--space-5);
-      color: #bdc3c7;
-       text-decoration: none;
-       transition: background-color 0.2s, color 0.2s;
-       border-radius: 6px;
-       margin-bottom: var(--space-2);
-       min-height: 44px;
-       font-size: var(--font-base);
-  }
-  
-  .sidebar-footer a:hover {
-      background-color: #34495e;
-      color: #ecf0f1;
-  }
-  
-  .sidebar-footer a i {
-      margin-right: var(--space-3);
-      width: 20px;
-      text-align: center;
-  }
-  .sidebar-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 280px;
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
 }
 
-/* Style the NavLink (<a> tag) directly */
-.sidebar-nav li a {
-    display: block;
-    padding: 12px 20px;
-    color: #bdc3c7;
-    text-decoration: none;
-    transition: background-color 0.2s, color 0.2s;
-    border-radius: 4px;
-    margin-bottom: 5px; /* Apply margin here or on li */
+.sidebar.open {
+  transform: translateX(0);
 }
 
-.sidebar-nav li a:hover {
-    background-color: #34495e;
-    color: #ecf0f1;
+.mobile-close-btn {
+  display: block;
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  background: none;
+  border: none;
+  color: var(--color-sidebar-text);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--border-radius);
+  transition: background-color 0.2s ease;
 }
 
-/* Style the active NavLink */
-.sidebar-nav li a.active {
-    background-color: #3498db;
-    color: #ffffff;
-    font-weight: bold;
+.mobile-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.sidebar-nav li a i {
-    margin-right: 10px;
-    width: 20px;
-    text-align: center;
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-6) 0;
 }
 
-.sidebar-logout-button {
-    background: none;
-    border: none;
-    color: #bdc3c7;
-    padding: var(--space-3) var(--space-5);
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    font-size: var(--font-base);
-    border-radius: 6px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
 }
 
-.sidebar-logout-button:hover {
-    background-color: #34495e;
-    color: #ecf0f1;
+.nav-list li {
+  margin: 0;
 }
 
-.sidebar-logout-button i {
-    margin-right: var(--space-3);
-    width: 20px;
-    text-align: center;
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  min-height: 44px; /* Touch-friendly */
+}
+
+.nav-link:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text-hover);
+}
+
+.nav-link.active {
+  background: var(--color-sidebar-active);
+  color: var(--color-sidebar-text-active);
+  border-left-color: var(--color-primary);
+  font-weight: 500;
+}
+
+.nav-link i {
+  width: 20px;
+  text-align: center;
+  font-size: var(--text-base);
+}
+
+.nav-link span {
+  font-size: var(--text-base);
+}
+
+/* Sidebar footer with logout */
+.sidebar-footer {
+  padding: var(--space-4) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-6);
+  background: none;
+  border: none;
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: var(--text-base);
+  min-height: 44px; /* Touch-friendly */
+}
+
+.logout-btn:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text-hover);
+}
+
+.logout-btn i {
+  width: 20px;
+  text-align: center;
+  font-size: var(--text-base);
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .sidebar {
+    position: relative;
+    transform: translateX(0);
+    width: 250px;
+    flex-shrink: 0;
+  }
+
+  .mobile-close-btn {
+    display: none;
+  }
 }

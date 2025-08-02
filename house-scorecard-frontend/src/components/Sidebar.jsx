@@ -5,14 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
 
 function Sidebar({ isOpen, onClose }) {
-  const { isAuthenticated, logout } = useAuth();
-
-  const navLinkStyle = ({ isActive }) => {
-    return isActive ? 'active' : '';
-  };
+  const { logout } = useAuth();
 
   const handleNavClick = () => {
-    // Close sidebar on mobile when navigation item is clicked
+    // Close sidebar on mobile when navigating
     if (onClose) {
       onClose();
     }
@@ -26,40 +22,84 @@ function Sidebar({ isOpen, onClose }) {
   };
 
   return (
-    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="sidebar-header">
-        <NavLink to="/" style={{ textDecoration: 'none', color: 'inherit' }} onClick={handleNavClick}>
-          <h2>House Scorecard</h2>
-        </NavLink>
-        <button className="sidebar-close-btn mobile-only" onClick={onClose}>
-          <i className="fas fa-times"></i>
-        </button>
-      </div>
-      <nav className="sidebar-nav">
-        <ul>
-          {isAuthenticated && (
-            <>
-              <li><NavLink to="/properties" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-list-ul"></i> Properties</NavLink></li>
-              <li><NavLink to="/compare" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-balance-scale"></i> Compare</NavLink></li>
-              <li><NavLink to="/criteria" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-tasks"></i> My Criteria</NavLink></li>
-              <li><NavLink to="/map" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-map-marker-alt"></i> Map</NavLink></li>
-            </>
-          )}
+    <nav className={`sidebar ${isOpen ? 'open' : ''}`}>
+      {/* Mobile close button */}
+      <button className="mobile-close-btn" onClick={onClose}>
+        <i className="fas fa-times"></i>
+      </button>
+
+      <div className="sidebar-content">
+        <ul className="nav-list">
+          <li>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleNavClick}
+            >
+              <i className="fas fa-chart-line"></i>
+              <span>Dashboard</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/properties"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleNavClick}
+            >
+              <i className="fas fa-list"></i>
+              <span>Properties</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/compare"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleNavClick}
+            >
+              <i className="fas fa-balance-scale"></i>
+              <span>Compare</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/criteria"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleNavClick}
+            >
+              <i className="fas fa-list-check"></i>
+              <span>My Criteria</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/map"
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleNavClick}
+            >
+              <i className="fas fa-map-marker-alt"></i>
+              <span>Map</span>
+            </NavLink>
+          </li>
         </ul>
-      </nav>
-      <div className="sidebar-footer">
-        {isAuthenticated ? (
-          <>
-            <NavLink to="/settings" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-cog"></i> Settings</NavLink>
-            <button onClick={handleLogout} className="sidebar-logout-button">
-              <i className="fas fa-sign-out-alt"></i> Logout
-            </button>
-          </>
-        ) : (
-          <NavLink to="/login" className={navLinkStyle} onClick={handleNavClick}><i className="fas fa-sign-in-alt"></i> Login</NavLink>
-        )}
+
+        {/* Settings and Logout buttons */}
+        <div className="sidebar-footer">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={handleNavClick}
+          >
+            <i className="fas fa-cog"></i>
+            <span>Settings</span>
+          </NavLink>
+          
+          <button className="logout-btn" onClick={handleLogout}>
+            <i className="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </nav>
   );
 }
 

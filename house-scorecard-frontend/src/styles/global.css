@@ -180,15 +180,6 @@ body {
     }
   }
   
-  /* Placeholder for settings icon */
-  .settings-icon {
-    cursor: pointer;
-    font-size: 1.5em;
-    color: #7f8c8d;
-  }
-  .settings-icon:hover {
-     color: #34495e;
-  }
   
   /* Mobile-first FAB style */
   .fab {
