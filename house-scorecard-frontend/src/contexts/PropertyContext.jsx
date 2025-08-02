@@ -402,7 +402,12 @@ export function PropertyProvider({ children }) {
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
-      setProperties(prevProperties => prevProperties.filter(p => p.id !== id));
+      setProperties(prevProperties => {
+        const newProperties = prevProperties.filter(p => p.id !== id);
+        // Save updated properties to localStorage
+        localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
+        return newProperties;
+      });
     } catch (error) {
       console.error('Failed to delete property:', error);
     }

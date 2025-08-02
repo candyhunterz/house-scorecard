@@ -1,5 +1,5 @@
 // src/pages/PropertyDetail.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 // Make sure updatePropertyImages is imported from context
 import { useProperties } from '../contexts/PropertyContext';
@@ -15,7 +15,7 @@ import './PropertyDetail.css'; // Ensure CSS is imported
 
 // --- Reusable Rating Input Component ---
 // Renders the appropriate input (checkbox, stars, number) based on criterion type and ratingType
-function RatingInput({ criterion, rating, onChange }) {
+const RatingInput = memo(({ criterion, rating, onChange }) => {
 
     /** Handler for Checkbox changes */
     const handleCheckboxChange = (e) => { onChange(criterion.id, e.target.checked); };
@@ -72,7 +72,7 @@ function RatingInput({ criterion, rating, onChange }) {
         }
         default: return null;
     }
-} // End RatingInput Component
+}); // End RatingInput Component
 
 
 // --- Scoring Logic Function ---
@@ -127,6 +127,7 @@ function PropertyDetail() {
     // --- Component State ---
     const [property, setProperty] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false); // New state for deletion process
     const [ratings, setRatings] = useState({}); // Local ratings state for inputs
     const [calculatedScore, setCalculatedScore] = useState(null); // Displayed score
     const [initialRatingsLoaded, setInitialRatingsLoaded] = useState(false); // Track if we've loaded initial ratings
@@ -291,6 +292,7 @@ function PropertyDetail() {
         });
         
         if (confirmed) {
+            setIsDeleting(true); // Set deleting state to true
             try {
                 await deleteProperty(property.id);
                 showSuccess('Property deleted successfully!');
@@ -298,6 +300,7 @@ function PropertyDetail() {
             } catch (error) {
                 console.error('Error deleting property:', error);
                 showError('Failed to delete property.');
+                setIsDeleting(false); // Reset deleting state on error
             }
         }
     };
@@ -338,8 +341,14 @@ function PropertyDetail() {
     // --- Render Logic ---
     // Handle Loading State
     if (loading) { return <div className="loading-message">Loading property details...</div>; }
+    
+    // Handle Deleting State
+    if (isDeleting) {
+        return <div className="loading-message">Deleting property...</div>;
+    }
+
     // Handle Property Not Found State
-    if (!property) { return (<div className="error-message"><h2>Property Not Found</h2><p>Sorry, we couldn't find details for property ID: {propertyId}.</p><button onClick={() => navigate('/properties')} className="btn btn-secondary">Back to Dashboard</button></div>); }
+    if (!property) { return (<div className="error-message"><h2>Property Not Found</h2><p>Sorry, we couldn't find details for property ID: ${propertyId}.</p><button onClick={() => navigate('/properties')} className="btn btn-secondary">Back to Dashboard</button></div>); }
 
     // --- Render property details ---
     return (
