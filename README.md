@@ -1,4 +1,4 @@
-# House Scorecard App
+"""# House Scorecard App
 
 A web application designed to help users objectively compare and score potential houses based on their personalized criteria (Must-Haves, Nice-to-Haves, Deal Breakers).
 
@@ -12,6 +12,7 @@ This repository contains:
 *   User registration and login.
 *   Add new property details (address, price, stats, notes, image URLs).
 *   View properties list on a dashboard with enhanced search and filtering.
+*   **Bulk Import**: Import properties from a CSV file.
 *   **Property Status Tracking**: Full pipeline management (Interested → Viewing Scheduled → Viewed → Offer Made → Under Contract → Closed → Passed).
 *   **Advanced Filtering**: Filter by price, score, beds, baths, square footage, criteria status, and property status.
 *   **Enhanced Search**: Real-time search across property addresses and notes.
@@ -100,6 +101,24 @@ npm install
 npm run dev
 ```
 
+## Running Tests
+
+### Backend
+
+To run the backend tests, navigate to the `house-scorecard-backend` directory and run:
+
+```bash
+python manage.py test core
+```
+
+### Frontend
+
+To run the frontend tests, navigate to the `house-scorecard-frontend` directory and run:
+
+```bash
+npm test
+```
+
 ## Deployment
 
 This project is configured for deployment with Render for the backend and Vercel for the frontend.
@@ -129,6 +148,10 @@ This project is configured for deployment with Render for the backend and Vercel
 5.  **Deploy:** Click "Deploy".
 
 **Important:** After deploying the frontend, remember to add your Vercel app's URL to the `CORS_ALLOWED_ORIGINS` list in the backend `settings.py` and redeploy the backend for the change to take effect.
+
+## Contributing
+
+Contributions are welcome! Please follow the existing code style and conventions. If you'd like to contribute, please fork the repository and open a pull request.
 
 ## Recent Updates (Latest Version)
 
@@ -189,4 +212,4 @@ This project is configured for deployment with Render for the backend and Vercel
 - Backend migrations applied successfully
 - Full API compatibility verified
 - Error handling tested and robust
-- Production-ready configuration maintained
+- Production-ready configuration maintained""

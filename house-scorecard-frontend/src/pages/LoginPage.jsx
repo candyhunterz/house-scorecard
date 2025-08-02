@@ -19,7 +19,7 @@ function LoginPage() {
         try {
             const result = await login(username, password);
             if (result.success) {
-                navigate('/properties'); // Redirect to properties page
+                navigate('/dashboard'); // Redirect to dashboard page
             } else {
                 setError(result.error);
             }

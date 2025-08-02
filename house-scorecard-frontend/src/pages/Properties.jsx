@@ -1,5 +1,5 @@
 // src/pages/Properties.jsx
-import React, { useState, useMemo } from 'react'; // Added useMemo
+import React, { useState, useMemo, useEffect } from 'react'; // Added useMemo
 import { useNavigate } from 'react-router-dom';
 import PropertyCard from '../components/PropertyCard';
 import SearchAndFilter from '../components/SearchAndFilter';
@@ -31,6 +31,28 @@ function Properties() {
     dealBreakersPresent: null,
     statuses: []
   });
+  const [showScroll, setShowScroll] = useState(false);
+
+  // --- Scroll-to-top Logic ---
+  const checkScrollTop = () => {
+    // Show button when page is scrolled down
+    if (!showScroll && window.pageYOffset > 300) {
+      setShowScroll(true);
+    } else if (showScroll && window.pageYOffset <= 300) {
+      setShowScroll(false);
+    }
+  };
+
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    window.addEventListener('scroll', checkScrollTop);
+    return () => {
+      window.removeEventListener('scroll', checkScrollTop);
+    };
+  }, [showScroll]);
 
   // --- Event Handlers ---
   const handleSortChange = (newSortBy) => {
@@ -65,6 +87,7 @@ function Properties() {
   };
 
   const handleAddPropertyClick = () => { navigate('/add-property'); };
+  const handleBulkImportClick = () => { navigate('/bulk-import'); };
   const handleCardClick = (propertyId) => { navigate(`/properties/${propertyId}`); };
 
   // Helper function to check if property meets criteria requirements
@@ -162,7 +185,27 @@ function Properties() {
     <div className="dashboard-container">
       {/* Header */}
       <header className="dashboard-header">
-        <h1>My Properties</h1>
+        <div className="header-content">
+          <h1>My Properties</h1>
+          <div className="header-actions">
+            <button 
+              className="btn btn-secondary btn-sm"
+              onClick={handleBulkImportClick}
+              title="Import multiple properties from CSV"
+            >
+              <i className="fas fa-upload"></i>
+              Bulk Import
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={handleAddPropertyClick}
+              title="Add a single property"
+            >
+              <i className="fas fa-plus"></i>
+              Add Property
+            </button>
+          </div>
+        </div>
       </header>
       
       {/* Search and Filter Component */}
@@ -219,9 +262,12 @@ function Properties() {
       </div>
       {/* --- End Property List --- */}
 
-
-      {/* Floating Action Button */}
-      <button className="fab" title="Add New Property" onClick={handleAddPropertyClick}>+</button>
+      {/* --- Scroll to Top Button --- */}
+      {showScroll && (
+        <button onClick={scrollTop} className="scroll-to-top" title="Scroll to top">
+          <i className="fas fa-arrow-up"></i>
+        </button>
+      )}
 
     </div> // End container
   );

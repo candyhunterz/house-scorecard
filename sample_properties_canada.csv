@@ -1,0 +1,6 @@
+Address,List Price,Bedrooms,Bathrooms,Square Feet,MLS Number,Property Type
+"123 Main St, Toronto ON M5V 1A1","$599,000",3,2,1200,C1234567,Detached
+"456 Oak Ave, Vancouver BC V6B 2K9","CAD $875,000",4,3.5,1800,V9876543,Townhouse
+"789 Maple Dr, Calgary AB T2P 3H2","$450,000",2,1.5,950,A5555444,Condo
+"321 Pine St, Montreal QC H3A 1A1","$325,000",1,1,650,Q7777888,Apartment
+"654 Elm Rd, Halifax NS B3H 2R2","$275,000",3,2,1100,N3333222,Semi-detached

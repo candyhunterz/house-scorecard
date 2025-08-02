@@ -15,6 +15,7 @@ import MapPage from './pages/MapPage';
 import PropertyDetail from './pages/PropertyDetail';
 import AddProperty from './pages/AddProperty';
 import EditProperty from './pages/EditProperty';
+import BulkImport from './pages/BulkImport';
 import Settings from './pages/Settings';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -109,6 +110,7 @@ function AppLayout() {
           <Route path="/properties/:propertyId" element={<PropertyDetail />} />
           <Route path="/edit-property/:propertyId" element={<EditProperty />} />
           <Route path="/add-property" element={<AddProperty />} />
+          <Route path="/bulk-import" element={<BulkImport />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/criteria" element={<Criteria />} />
           <Route path="/map" element={<MapPage />} />

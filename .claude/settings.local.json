@@ -13,7 +13,9 @@
       "Bash(rm:*)",
       "Bash(mv:*)",
       "WebFetch(domain:ddwiki.reso.org)",
-      "WebFetch(domain:support.canopymls.com)"
+      "WebFetch(domain:support.canopymls.com)",
+      "Bash(.venvScriptspython.exe manage.py makemigrations)",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations)"
     ],
     "deny": []
   }
