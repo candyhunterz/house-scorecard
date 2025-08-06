@@ -16,14 +16,35 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse, HttpResponseRedirect
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+
+def api_status(request):
+    """API status endpoint."""
+    return JsonResponse({
+        'message': 'House Scorecard API',
+        'status': 'online',
+        'version': '1.0',
+        'frontend_url': 'https://house-scorecard.vercel.app',  # Update with your frontend URL
+    })
+
+def redirect_to_frontend(request):
+    """Redirect to frontend application."""
+    # Update this URL to match where your frontend is deployed
+    frontend_url = 'https://house-scorecard.vercel.app'  # Change this to your actual frontend URL
+    return HttpResponseRedirect(frontend_url)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('status/', api_status, name='api_status'),
+    # Redirect root to frontend - update the URL in the function above
+    path('', redirect_to_frontend, name='home'),
 ]
