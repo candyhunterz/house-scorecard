@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.contrib.auth.models import User
 import csv
 import io
 import re
@@ -12,7 +13,7 @@ from .models import Property, Criterion, Rating
 from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer, UserSerializer
 
 class UserCreate(generics.CreateAPIView):
-    queryset = Rating.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (permissions.AllowAny,)
 

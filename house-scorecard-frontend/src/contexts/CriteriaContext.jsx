@@ -19,7 +19,7 @@ const CriteriaContext = createContext();
 export function CriteriaProvider({ children }) {
   // State holding the array of all criteria objects
   const [criteria, setCriteria] = useState([]);
-  const { authenticatedFetch } = useAuth();
+  const { authenticatedFetch, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchCriteria = async () => {
@@ -35,10 +35,10 @@ export function CriteriaProvider({ children }) {
       }
     };
 
-    if (authenticatedFetch) {
+    if (authenticatedFetch && isAuthenticated) {
       fetchCriteria();
     }
-  }, [authenticatedFetch]);
+  }, [authenticatedFetch, isAuthenticated]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 

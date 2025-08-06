@@ -14,7 +14,7 @@ const PropertyContext = createContext();
 export function PropertyProvider({ children }) {
   // State holding the array of all property objects
   const [properties, setProperties] = useState([]);
-  const { authenticatedFetch } = useAuth();
+  const { authenticatedFetch, isAuthenticated } = useAuth();
 
     useEffect(() => {
       const fetchProperties = async () => {
@@ -57,10 +57,10 @@ export function PropertyProvider({ children }) {
         }
       };
 
-      if (authenticatedFetch) {
+      if (authenticatedFetch && isAuthenticated) {
         fetchProperties();
       }
-    }, [authenticatedFetch]);
+    }, [authenticatedFetch, isAuthenticated]);
 
   // --- Action Functions (Memoized using useCallback for stable references) ---
 
