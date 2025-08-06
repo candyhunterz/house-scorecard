@@ -10,3 +10,6 @@ sentry-sdk[django]
 gunicorn
 dj-database-url
 whitenoise
+requests
+beautifulsoup4
+lxml

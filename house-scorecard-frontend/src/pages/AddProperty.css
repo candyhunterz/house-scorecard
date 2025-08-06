@@ -193,3 +193,78 @@
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+/* Auto-fill functionality styles */
+.url-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.url-input-group input {
+  flex: 1;
+}
+
+.btn-auto-fill {
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 6px;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.btn-auto-fill:hover:not(:disabled) {
+  background-color: #219a52;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.btn-auto-fill:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-auto-fill:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.auto-fill-status {
+  color: var(--primary-color);
+  font-style: italic;
+  animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+.auto-fill-help {
+  color: #666;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+@keyframes pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+/* Tablet and desktop: horizontal layout for URL input */
+@media (min-width: 768px) {
+  .url-input-group {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .btn-auto-fill {
+    margin-top: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}

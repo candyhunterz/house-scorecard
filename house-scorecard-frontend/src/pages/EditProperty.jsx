@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import './AddProperty.css'; // Re-use the styling from AddProperty
 
 function EditProperty() {
     const { propertyId } = useParams();
     const navigate = useNavigate();
     const { getPropertyById, updateProperty } = useProperties();
-    const { showSuccess, showError } = useToast();
+    const { showSuccess, showError, showWarning } = useToast();
+    const { authenticatedFetch } = useAuth();
 
     const [property, setProperty] = useState(null);
     const [formData, setFormData] = useState({
@@ -23,6 +25,7 @@ function EditProperty() {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isAutoFilling, setIsAutoFilling] = useState(false);
 
     useEffect(() => {
         const fetchedProperty = getPropertyById(propertyId);
@@ -50,6 +53,72 @@ function EditProperty() {
             ...prevData,
             [name]: value
         }));
+    };
+
+    // --- Auto-Fill Handler ---
+    const handleAutoFill = async () => {
+        if (!formData.listingUrl.trim()) {
+            showWarning('Please enter a listing URL first.');
+            return;
+        }
+
+        setIsAutoFilling(true);
+        
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+            const response = await authenticatedFetch(`${API_BASE_URL}/properties/scrape_listing/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: formData.listingUrl.trim() }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Scraping failed');
+            }
+
+            const data = await response.json();
+            
+            // Auto-fill form fields with scraped data, but only if the field is empty
+            const updatedFormData = { ...formData };
+            
+            if (data.address && !updatedFormData.address.trim()) {
+                updatedFormData.address = data.address;
+            }
+            if (data.price && !updatedFormData.price.toString().trim()) {
+                updatedFormData.price = data.price.toString();
+            }
+            if (data.beds && !updatedFormData.beds.toString().trim()) {
+                updatedFormData.beds = data.beds.toString();
+            }
+            if (data.baths && !updatedFormData.baths.toString().trim()) {
+                updatedFormData.baths = data.baths.toString();
+            }
+            if (data.sqft && !updatedFormData.sqft.toString().trim()) {
+                updatedFormData.sqft = data.sqft.toString();
+            }
+            if (data.images && data.images.length > 0 && !updatedFormData.imageUrlsString.trim()) {
+                updatedFormData.imageUrlsString = data.images.join('\n');
+            }
+
+            setFormData(updatedFormData);
+            showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
+            
+        } catch (error) {
+            console.error('Auto-fill error:', error);
+            const errorMsg = error.message;
+            
+            // Show helpful message for anti-bot protection
+            if (errorMsg.includes('blocked') || errorMsg.includes('security') || errorMsg.includes('automated requests') || errorMsg.includes('anti-bot protection') || errorMsg.includes('Incapsula') || errorMsg.includes('too small')) {
+                showError(`🚫 ${errorMsg}\n\n💡 How to get the data manually:\n1. Open the listing URL in your browser\n2. Copy the address, price, beds, baths, sqft\n3. Right-click on photos → "Copy image address" for each photo\n4. Paste the details into the form below`);
+            } else {
+                showError(`Auto-fill failed: ${errorMsg}`);
+            }
+        } finally {
+            setIsAutoFilling(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -115,14 +184,26 @@ function EditProperty() {
                 </div>
                 <div className="form-group">
                     <label htmlFor="listingUrl">Listing URL:</label>
-                    <input
-                        type="url"
-                        id="listingUrl"
-                        name="listingUrl"
-                        value={formData.listingUrl}
-                        onChange={handleChange}
-                        placeholder="e.g., https://www.zillow.com/homedetails/"
-                    />
+                    <div className="url-input-group">
+                        <input
+                            type="url"
+                            id="listingUrl"
+                            name="listingUrl"
+                            value={formData.listingUrl}
+                            onChange={handleChange}
+                            placeholder="e.g., https://www.realtor.ca/..."
+                        />
+                        <button 
+                            type="button" 
+                            className="btn btn-auto-fill" 
+                            onClick={handleAutoFill}
+                            disabled={isAutoFilling || !formData.listingUrl.trim()}
+                        >
+                            {isAutoFilling ? 'Auto-Filling...' : '🔄 Auto-Fill'}
+                        </button>
+                    </div>
+                    {isAutoFilling && <small className="auto-fill-status">Scraping listing data, please wait...</small>}
+                    {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
                 </div>
                 <div className="form-group">
                     <label htmlFor="price">Price:</label>

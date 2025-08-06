@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext'; // Import context hook
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
+import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
 import './AddProperty.css'; // Make sure styles are imported
 
@@ -12,6 +13,7 @@ function AddProperty() {
   const { addProperty } = useProperties(); // Get add function from context
   const { showSuccess, showError, showWarning } = useToast();
   const { showConfirm, confirmDialog } = useConfirm();
+  const { authenticatedFetch } = useAuth();
 
   // --- State for Form Inputs ---
   const [address, setAddress] = useState('');
@@ -27,6 +29,9 @@ function AddProperty() {
   // const [latitude, setLatitude] = useState('');
   // const [longitude, setLongitude] = useState('');
 
+  // State for Auto-Fill functionality
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+
   // --- Input Change Handlers ---
   // Simple handlers to update state based on input changes
   const handleAddressChange = (e) => setAddress(e.target.value);
@@ -41,6 +46,69 @@ function AddProperty() {
   // Optional handlers for lat/lon
   // const handleLatitudeChange = (e) => setLatitude(e.target.value);
   // const handleLongitudeChange = (e) => setLongitude(e.target.value);
+
+  // --- Auto-Fill Handler ---
+  const handleAutoFill = async () => {
+    if (!listingUrl.trim()) {
+      showWarning('Please enter a listing URL first.');
+      return;
+    }
+
+    setIsAutoFilling(true);
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+      const response = await authenticatedFetch(`${API_BASE_URL}/properties/scrape_listing/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: listingUrl.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Scraping failed');
+      }
+
+      const data = await response.json();
+      
+      // Auto-fill form fields with scraped data
+      if (data.address && !address.trim()) {
+        setAddress(data.address);
+      }
+      if (data.price && !price.toString().trim()) {
+        setPrice(data.price.toString());
+      }
+      if (data.beds && !beds.toString().trim()) {
+        setBeds(data.beds.toString());
+      }
+      if (data.baths && !baths.toString().trim()) {
+        setBaths(data.baths.toString());
+      }
+      if (data.sqft && !sqft.toString().trim()) {
+        setSqft(data.sqft.toString());
+      }
+      if (data.images && data.images.length > 0 && !imageUrlsString.trim()) {
+        setImageUrlsString(data.images.join('\n'));
+      }
+
+      showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
+      
+    } catch (error) {
+      console.error('Auto-fill error:', error);
+      const errorMsg = error.message;
+      
+      // Show helpful message for anti-bot protection
+      if (errorMsg.includes('blocked') || errorMsg.includes('security') || errorMsg.includes('automated requests') || errorMsg.includes('anti-bot protection') || errorMsg.includes('Incapsula') || errorMsg.includes('too small')) {
+        showError(`🚫 ${errorMsg}\n\n💡 How to get the data manually:\n1. Open the listing URL in your browser\n2. Copy the address, price, beds, baths, sqft\n3. Right-click on photos → "Copy image address" for each photo\n4. Paste the details into the form below`);
+      } else {
+        showError(`Auto-fill failed: ${errorMsg}`);
+      }
+    } finally {
+      setIsAutoFilling(false);
+    }
+  };
 
   // --- Form Submission Handler ---
   const handleSubmit = (e) => {
@@ -131,7 +199,19 @@ function AddProperty() {
         {/* Listing URL Input (Optional) */}
         <div className="form-group">
           <label htmlFor="listingUrl">Listing URL</label>
-          <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.zillow.com/..."/>
+          <div className="url-input-group">
+            <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.realtor.ca/..."/>
+            <button 
+              type="button" 
+              className="btn btn-auto-fill" 
+              onClick={handleAutoFill}
+              disabled={isAutoFilling || !listingUrl.trim()}
+            >
+              {isAutoFilling ? 'Auto-Filling...' : '🔄 Auto-Fill'}
+            </button>
+          </div>
+          {isAutoFilling && <small className="auto-fill-status">Scraping listing data, please wait...</small>}
+          {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
         </div>
 
         {/* Asking Price Input (Required, Number) */}

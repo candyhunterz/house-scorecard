@@ -19,7 +19,10 @@
       "Bash(curl:*)",
       "Bash(python manage.py:*)",
       "Bash(pip install:*)",
-      "Bash(\"./venv/Scripts/python.exe\":*)"
+      "Bash(\"./venv/Scripts/python.exe\":*)",
+      "WebFetch(domain:www.realtor.ca)",
+      "Bash(python test:*)",
+      "Bash(python:*)"
     ],
     "deny": []
   }
