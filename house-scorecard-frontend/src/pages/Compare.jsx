@@ -211,9 +211,7 @@ function Compare() {
         <table className="compare-table">
           <thead>
             <tr>
-              <th className="sticky-col header-cell criteria-col">Feature</th> {/* Criteria Column Header */}
-              {/* Property Column Headers */}
-              {sortedProperties.map(prop => (
+              <th className="sticky-col header-cell criteria-col">Feature</th>{/* Criteria Column Header */}{/* Property Column Headers */}{sortedProperties.map(prop => (
                 <th key={prop.id} className="header-cell property-col">
                   <Link to={`/properties/${prop.id}`} title="View Details">
                     {prop.address}
@@ -225,8 +223,7 @@ function Compare() {
           <tbody>
             {/* --- Basic Info Rows --- */}
             <tr className="highlight-row">
-              <td className="sticky-col criteria-col"><strong>Score</strong></td>
-              {sortedProperties.map(prop => (
+              <td className="sticky-col criteria-col"><strong>Score</strong></td>{sortedProperties.map(prop => (
                 <td key={prop.id} className="data-cell score-cell">
                     <span className={`score-badge-table ${prop.score >= 75 ? 'high' : prop.score >= 50 ? 'medium' : prop.score === 0 ? 'zero' : 'low'}`}>
                          {prop.score ?? '--'}
@@ -235,26 +232,22 @@ function Compare() {
               ))}
             </tr>
             <tr>
-              <td className="sticky-col criteria-col">Price</td>
-              {sortedProperties.map(prop => (
+              <td className="sticky-col criteria-col">Price</td>{sortedProperties.map(prop => (
                 <td key={prop.id} className="data-cell">{formatPrice(prop.price)}</td>
               ))}
             </tr>
             <tr>
-              <td className="sticky-col criteria-col">Bedrooms</td>
-              {sortedProperties.map(prop => (
+              <td className="sticky-col criteria-col">Bedrooms</td>{sortedProperties.map(prop => (
                 <td key={prop.id} className="data-cell">{prop.beds ?? 'N/A'}</td>
               ))}
             </tr>
             <tr>
-              <td className="sticky-col criteria-col">Bathrooms</td>
-              {sortedProperties.map(prop => (
+              <td className="sticky-col criteria-col">Bathrooms</td>{sortedProperties.map(prop => (
                 <td key={prop.id} className="data-cell">{prop.baths ?? 'N/A'}</td>
               ))}
             </tr>
             <tr>
-              <td className="sticky-col criteria-col">Sq. Footage</td>
-              {sortedProperties.map(prop => (
+              <td className="sticky-col criteria-col">Sq. Footage</td>{sortedProperties.map(prop => (
                 <td key={prop.id} className="data-cell">{prop.sqft ? `${prop.sqft} sqft` : 'N/A'}</td>
               ))}
             </tr>
@@ -268,8 +261,7 @@ function Compare() {
                 <td className="sticky-col criteria-col">
                     {criterion.text}
                     {criterion.type === 'niceToHave' && <span className="weight-label-table"> (W: {criterion.weight})</span>}
-                </td>
-                {sortedProperties.map(prop => (
+                </td>{sortedProperties.map(prop => (
                   <td key={prop.id} className="data-cell rating-cell">
                     <span className="rating-display">
                       {displayRating(prop, criterion, false)}

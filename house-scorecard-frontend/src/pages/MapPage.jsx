@@ -1,7 +1,8 @@
 // src/pages/MapPage.jsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useProperties } from '../contexts/PropertyContext';
+import { useToast } from '../contexts/ToastContext';
 import L from 'leaflet'; // Import Leaflet library itself for custom icons or bounds calculation
 import './MapPage.css'; // Create this CSS file next
 
@@ -47,7 +48,9 @@ function FitBounds({ properties }) {
 
 
 function MapPage() {
-  const { properties } = useProperties();
+  const { properties, geocodeProperties } = useProperties();
+  const { showInfo, showSuccess } = useToast();
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Filter properties that have valid coordinates
   const propertiesWithCoords = useMemo(() =>
@@ -55,11 +58,79 @@ function MapPage() {
     [properties]
   );
 
-  const defaultPosition = [40.7128, -74.0060]; // Default center (e.g., NYC) if no properties
+  // Count properties without coordinates
+  const propertiesWithoutCoords = useMemo(() =>
+    properties.filter(p => !p.latitude || !p.longitude),
+    [properties]
+  );
+
+  const defaultPosition = [43.6532, -79.3832]; // Default center (Toronto, Canada)
+
+  const handleGeocodeProperties = async () => {
+    if (propertiesWithoutCoords.length === 0) {
+      showInfo('All properties already have map coordinates!');
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const result = await geocodeProperties();
+      if (result.geocoded_count > 0) {
+        showSuccess(`🗺️ Successfully added ${result.geocoded_count} properties to the map!`);
+      } else {
+        showInfo('No additional properties could be geocoded.');
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      showError('Failed to add properties to map. Please try again.');
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   return (
     <div className="map-page-container">
       <h1>Property Map View</h1>
+      
+      {/* Map Stats and Controls */}
+      <div className="map-controls">
+        <div className="map-stats">
+          <span className="stat">
+            📍 {propertiesWithCoords.length} properties on map
+          </span>
+          {propertiesWithoutCoords.length > 0 && (
+            <span className="stat warning">
+              📍 {propertiesWithoutCoords.length} properties missing coordinates
+            </span>
+          )}
+        </div>
+        
+        {propertiesWithoutCoords.length > 0 && (
+          <button 
+            onClick={handleGeocodeProperties} 
+            disabled={isGeocoding}
+            className="btn btn-primary geocode-btn"
+          >
+            {isGeocoding ? '🌐 Adding to map...' : `🗺️ Add ${propertiesWithoutCoords.length} properties to map`}
+          </button>
+        )}
+      </div>
+
+      {/* Properties without coordinates list */}
+      {propertiesWithoutCoords.length > 0 && !isGeocoding && (
+        <div className="missing-coords-info">
+          <h3>Properties not on map:</h3>
+          <ul>
+            {propertiesWithoutCoords.slice(0, 5).map(prop => (
+              <li key={prop.id}>{prop.address}</li>
+            ))}
+            {propertiesWithoutCoords.length > 5 && (
+              <li>... and {propertiesWithoutCoords.length - 5} more</li>
+            )}
+          </ul>
+        </div>
+      )}
+
       {/* MapContainer sets up the Leaflet map */}
       <MapContainer center={defaultPosition} zoom={5} className="map-view">
         {/* TileLayer provides the base map visuals (OpenStreetMap) */}
@@ -73,11 +144,20 @@ function MapPage() {
           <Marker key={prop.id} position={[prop.latitude, prop.longitude]}>
             {/* Popup appears when the marker is clicked */}
             <Popup>
-              <strong>{prop.address}</strong><br />
-              Price: {prop.price ? `$${prop.price.toLocaleString()}` : 'N/A'}<br />
-              Score: {prop.score ?? '--'}
-              {/* Optional: Add a link to the detail page */}
-              <br/><a href={`/properties/${prop.id}`}>View Details</a>
+              <div className="property-popup">
+                <strong>{prop.address}</strong><br />
+                <div className="popup-details">
+                  Price: {prop.price ? `$${prop.price.toLocaleString()}` : 'N/A'}<br />
+                  Score: <span className={`score ${prop.score ? 'has-score' : ''}`}>{prop.score ?? '--'}</span><br />
+                  {prop.beds && <span>🛏️ {prop.beds} beds </span>}
+                  {prop.baths && <span>🛁 {prop.baths} baths </span>}
+                  {prop.sqft && <span>📐 {prop.sqft} sqft</span>}
+                </div>
+                {/* Link to the detail page */}
+                <div className="popup-actions">
+                  <a href={`/properties/${prop.id}`} className="view-details-btn">View Details</a>
+                </div>
+              </div>
             </Popup>
           </Marker>
         ))}

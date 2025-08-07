@@ -15,8 +15,36 @@ import random
 import logging
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
+from django.core.cache import cache
 from .models import Property, Criterion, Rating
 from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer, UserSerializer
+
+# Geocoding service using OpenStreetMap Nominatim API
+def geocode_address(address):
+    try:
+        import requests
+        response = requests.get(
+            f'https://nominatim.openstreetmap.org/search',
+            params={
+                'format': 'json',
+                'q': address,
+                'limit': 1,
+                'countrycodes': 'ca,us'
+            },
+            timeout=10
+        )
+        data = response.json()
+        
+        if data and len(data) > 0:
+            result = data[0]
+            return {
+                'latitude': float(result['lat']),
+                'longitude': float(result['lon'])
+            }
+        return None
+    except Exception as e:
+        logger.error(f'Geocoding failed for address "{address}": {str(e)}')
+        return None
 
 # Configure logger for scraping operations
 logger = logging.getLogger(__name__)
@@ -28,9 +56,70 @@ class UserCreate(generics.CreateAPIView):
 
 class PropertyViewSet(viewsets.ModelViewSet):
     """API endpoint for properties."""
-    queryset = Property.objects.all().order_by('-created_at')
     serializer_class = PropertySerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return only properties owned by the current user."""
+        return Property.objects.filter(owner=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        """Set the owner to the current user when creating a property and geocode if needed."""
+        # Get the property data before saving
+        property_data = serializer.validated_data
+        
+        # Try to geocode if no coordinates provided
+        if not property_data.get('latitude') or not property_data.get('longitude'):
+            address = property_data.get('address')
+            if address:
+                logger.info(f"Attempting to geocode address: {address}")
+                coordinates = geocode_address(address)
+                if coordinates:
+                    logger.info(f"Successfully geocoded {address}: {coordinates}")
+                    property_data['latitude'] = coordinates['latitude']
+                    property_data['longitude'] = coordinates['longitude']
+                else:
+                    logger.warning(f"Failed to geocode address: {address}")
+        
+        serializer.save(owner=self.request.user, **property_data)
+
+    @action(detail=False, methods=['post'])
+    def geocode_properties(self, request):
+        """Geocode properties that don't have coordinates."""
+        try:
+            properties_without_coords = Property.objects.filter(
+                owner=self.request.user,
+                latitude__isnull=True
+            ) | Property.objects.filter(
+                owner=self.request.user,
+                longitude__isnull=True
+            )
+            
+            geocoded_count = 0
+            for property_obj in properties_without_coords:
+                if property_obj.address:
+                    coordinates = geocode_address(property_obj.address)
+                    if coordinates:
+                        property_obj.latitude = coordinates['latitude']
+                        property_obj.longitude = coordinates['longitude']
+                        property_obj.save()
+                        geocoded_count += 1
+                        logger.info(f"Geocoded property {property_obj.id}: {property_obj.address}")
+                        # Add a small delay to be respectful to the API
+                        time.sleep(1)
+            
+            return Response({
+                'success': True,
+                'geocoded_count': geocoded_count,
+                'message': f'Successfully geocoded {geocoded_count} properties'
+            })
+            
+        except Exception as e:
+            logger.error(f"Geocoding error: {str(e)}")
+            return Response(
+                {'error': f'Geocoding failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=False, methods=['post'])
     def bulk_import(self, request):
@@ -73,9 +162,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
                         if not property_data.get('address'):
                             continue
                         
-                        # Check if property exists (by address)
+                        # Check if property exists (by address and owner)
                         existing_property = Property.objects.filter(
-                            address__iexact=property_data['address']
+                            address__iexact=property_data['address'],
+                            owner=request.user
                         ).first()
                         
                         if existing_property:
@@ -87,7 +177,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                             updated_count += 1
                         else:
                             # Create new property
-                            Property.objects.create(**property_data)
+                            Property.objects.create(owner=request.user, **property_data)
                             created_count += 1
                             
                     except Exception as e:
@@ -326,6 +416,27 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # Rate limiting - especially important for Realtor.ca
+            domain = parsed_url.netloc.lower()
+            user_ip = request.META.get('REMOTE_ADDR', 'unknown')
+            rate_limit_key = f'scrape_rate_limit_{domain}_{user_ip}'
+            
+            # Check if user has scraped this domain recently
+            last_scrape = cache.get(rate_limit_key)
+            if last_scrape:
+                # Enforce minimum interval between requests
+                min_interval = 60 if 'realtor.ca' in domain else 30  # 60s for Realtor.ca, 30s for others
+                time_since_last = time.time() - last_scrape
+                if time_since_last < min_interval:
+                    wait_time = int(min_interval - time_since_last)
+                    return Response(
+                        {'error': f'Rate limit: Please wait {wait_time} seconds before scraping {domain} again. This helps avoid being blocked by anti-bot systems.'}, 
+                        status=status.HTTP_429_TOO_MANY_REQUESTS
+                    )
+            
+            # Set rate limit for this request
+            cache.set(rate_limit_key, time.time(), timeout=300)  # 5 minute cache
+
             # Scrape the listing
             scraped_data = self._scrape_property_listing(url)
             
@@ -341,57 +452,77 @@ class PropertyViewSet(viewsets.ModelViewSet):
         """
         Scrape property data from various real estate websites with advanced anti-bot protection workarounds.
         """
-        # Extended list of realistic user agents from different browsers and versions
+        # Extended list of realistic user agents with more recent versions
         user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0'
+            # Chrome on Windows (most common)
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            # Chrome on Mac
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            # Firefox
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            # Safari
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
+            # Edge
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
         ]
         
+        # More sophisticated header variations
         base_headers = {
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8,fr-CA;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
             'Cache-Control': 'max-age=0',
             'Upgrade-Insecure-Requests': '1',
-            'Connection': 'keep-alive'
+            'Connection': 'keep-alive',
+            'DNT': '1',  # Do Not Track
+            'Pragma': 'no-cache',
         }
         
-        # Different header variations to try
+        # More realistic header variations to try
         header_variations = [
             {
                 **base_headers,
-                'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
                 'Sec-Ch-Ua-Mobile': '?0',
                 'Sec-Ch-Ua-Platform': '"Windows"',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
                 'Sec-Fetch-User': '?1',
+                'Sec-Purpose': 'prefetch',
             },
             {
                 **base_headers,
-                'Referer': 'https://www.google.com/',
+                'Referer': 'https://www.google.ca/',
+                'Sec-Fetch-Site': 'cross-site',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Dest': 'document',
             },
             {
                 **base_headers,
                 'Referer': 'https://www.realtor.ca/',
+                'Sec-Fetch-Site': 'same-origin',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Dest': 'document',
             },
-            base_headers  # Minimal headers
+            {
+                **base_headers,
+                'Referer': 'https://www.bing.com/',
+                'X-Forwarded-For': f'{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}',
+            },
+            base_headers  # Minimal headers as fallback
         ]
         
-        # Add random delay to avoid being too predictable
-        delay = random.uniform(3.0, 8.0)
-        time.sleep(delay)
-        
-        # Advanced multi-strategy approach
-        max_attempts = 5  # Increased attempts
+        # Single attempt - users don't want to wait
+        max_attempts = 1
         session = None
         response = None
+        
+        # Detect if this is Realtor.ca for special handling
+        is_realtor_ca = 'realtor.ca' in url.lower()
         
         for attempt in range(max_attempts):
             try:
@@ -400,67 +531,55 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 # Use new session for each attempt to avoid session fingerprinting
                 session = requests.Session()
                 
+                # Configure session with more realistic settings
+                session.max_redirects = 5
+                adapter = requests.adapters.HTTPAdapter(
+                    pool_connections=1,
+                    pool_maxsize=1,
+                    max_retries=0
+                )
+                session.mount('http://', adapter)
+                session.mount('https://', adapter)
+                
                 # Rotate user agent and headers for each attempt
                 selected_user_agent = random.choice(user_agents)
                 selected_headers = random.choice(header_variations).copy()
                 selected_headers['User-Agent'] = selected_user_agent
                 
-                # Advanced browsing simulation
-                if attempt >= 1:
-                    # Visit homepage first to establish session
-                    homepage_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}/"
-                    try:
-                        session.get(homepage_url, headers=selected_headers, timeout=15)
-                        time.sleep(random.uniform(2.0, 4.0))
-                    except:
-                        logger.warning("Homepage visit failed, continuing...")
+                # No pre-browsing simulation - go straight to target for speed
+                # Users don't want to wait for multiple page visits
                 
-                if attempt >= 2:
-                    # Try visiting a search page or property listings page
-                    search_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}/property-search/"
-                    try:
-                        session.get(search_url, headers=selected_headers, timeout=15)
-                        time.sleep(random.uniform(1.5, 3.0))
-                    except:
-                        logger.warning("Search page visit failed, continuing...")
+                # Make the actual request directly
+                target_url = url
                 
-                # Make the actual request
                 session.headers.update(selected_headers)
-                response = session.get(url, timeout=25, allow_redirects=True)
+                response = session.get(target_url, timeout=15, allow_redirects=True)  # Reduced timeout
                 response.raise_for_status()
                 
                 logger.info(f"Successfully fetched page, status: {response.status_code}, content length: {len(response.content)} bytes")
                 
-                # Quick check if we got meaningful content
-                if len(response.content) > 10000:  # Real Realtor.ca pages are 50KB+
-                    break
-                else:
-                    logger.warning(f"Response too small ({len(response.content)} bytes), might be blocked - retrying...")
-                    if attempt < max_attempts - 1:
-                        time.sleep(random.uniform(8.0, 15.0))  # Much longer wait for IP cooldown
-                        continue
-                
                 break  # Success, exit retry loop
                 
             except requests.RequestException as e:
-                logger.warning(f"Scraping attempt {attempt + 1} failed: {str(e)}")
-                if attempt < max_attempts - 1:
-                    wait_time = random.uniform(5.0, 12.0)  # Increased wait times
-                    logger.info(f"Waiting {wait_time:.1f}s before retry...")
-                    time.sleep(wait_time)
-                    continue
+                logger.warning(f"Scraping attempt failed: {str(e)}")
+                # Single attempt failed - provide immediate guidance
+                if is_realtor_ca:
+                    raise Exception(f'Realtor.ca is blocking automated requests. This is common due to their anti-bot protection.\n\nTry these alternatives:\n1. Copy the property details manually from your browser\n2. Try again in 30-60 minutes\n3. Use the mobile version: m.realtor.ca\n4. Use a different internet connection')
                 else:
-                    # All attempts failed
-                    raise Exception(f'Unable to access the listing URL after {max_attempts} attempts. The website may be temporarily unavailable or blocking automated requests. Please try again later or manually enter the property details.')
+                    raise Exception(f'Unable to access the listing URL. The website may be temporarily unavailable or blocking automated requests. Please try again later or manually enter the property details.')
         
         # If we get here, we have a successful response
         if not response:
             raise Exception(f'Unable to access the listing URL. Please try again later or manually enter the property details.')
         
-        # Final check - if all attempts resulted in small responses, we're likely blocked
-        if len(response.content) < 10000:
-            logger.warning(f"Final response still too small ({len(response.content)} bytes) - likely blocked by anti-bot protection")
-            raise Exception(f"Realtor.ca is currently blocking automated requests. The page responses are too small ({len(response.content)} bytes), indicating anti-bot protection is active. Please wait 15-30 minutes and try again, or manually copy the property details from your browser.")
+        # Quick validation - if response is suspiciously small, it's likely blocked
+        content_size = len(response.content)
+        if is_realtor_ca and content_size < 10000:  # Lowered threshold for faster failure
+            logger.warning(f"Realtor.ca response too small ({content_size} bytes) - likely blocked")
+            raise Exception(f"Realtor.ca blocked this request (response: {content_size} bytes).\n\n💡 Manual workaround:\n1. Open the listing URL in your browser\n2. Copy the address, price, beds, baths, sqft\n3. Manually paste the details into the form")
+        elif not is_realtor_ca and content_size < 3000:  # Lowered threshold
+            logger.warning(f"Response too small ({content_size} bytes) - likely blocked")
+            raise Exception(f"The website blocked this request (response: {content_size} bytes). Please manually enter the property details.")
             
         soup = BeautifulSoup(response.content, 'lxml')
         logger.info(f"Successfully parsed HTML content ({len(response.content)} bytes)")
@@ -945,12 +1064,22 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
 class CriterionViewSet(viewsets.ModelViewSet):
     """API endpoint for criteria."""
-    queryset = Criterion.objects.all().order_by('type', 'text')
     serializer_class = CriterionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        """Return only criteria owned by the current user."""
+        return Criterion.objects.filter(owner=self.request.user).order_by('type', 'text')
+
+    def perform_create(self, serializer):
+        """Set the owner to the current user when creating a criterion."""
+        serializer.save(owner=self.request.user)
+
 class RatingViewSet(viewsets.ModelViewSet):
     """API endpoint for ratings."""
-    queryset = Rating.objects.all()
     serializer_class = RatingSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Return only ratings for properties owned by the current user."""
+        return Rating.objects.filter(property__owner=self.request.user)

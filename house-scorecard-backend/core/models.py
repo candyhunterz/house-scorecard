@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 class Property(models.Model):
     """Represents a property being evaluated."""
-    # owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='properties') # Add when user auth is implemented
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='properties')
     address = models.CharField(max_length=255)
     listing_url = models.URLField(max_length=1024, blank=True, null=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
@@ -99,7 +99,7 @@ class Property(models.Model):
 
 class Criterion(models.Model):
     """Represents a user-defined criterion for scoring properties."""
-    # owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='criteria') # Add when user auth is implemented
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='criteria')
     text = models.CharField(max_length=255)
     TYPE_CHOICES = [
         ('mustHave', 'Must-Have'),

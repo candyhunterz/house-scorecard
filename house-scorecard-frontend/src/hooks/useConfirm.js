@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export function useConfirm() {
     const [confirmState, setConfirmState] = useState({
@@ -7,9 +7,11 @@ export function useConfirm() {
         message: '',
         confirmText: 'Yes',
         cancelText: 'Cancel',
-        type: 'warning',
-        onConfirm: null
+        type: 'warning'
     });
+
+    // Use ref to store the promise resolve function to avoid stale closures
+    const resolveRef = useRef(null);
 
     const showConfirm = useCallback(({
         title = "Confirm Action",
@@ -19,36 +21,47 @@ export function useConfirm() {
         type = "warning"
     }) => {
         return new Promise((resolve) => {
+            resolveRef.current = resolve;
             setConfirmState({
                 isOpen: true,
                 title,
                 message,
                 confirmText,
                 cancelText,
-                type,
-                onConfirm: () => resolve(true)
+                type
             });
         });
     }, []);
 
     const hideConfirm = useCallback(() => {
         setConfirmState(prev => ({ ...prev, isOpen: false }));
-        // If onConfirm wasn't called, resolve with false (cancelled)
-        if (confirmState.onConfirm) {
-            // Small delay to ensure the promise resolves after dialog closes
-            setTimeout(() => {
-                // This will only run if the user clicked cancel/close
-                // If they clicked confirm, this won't affect anything since promise already resolved
-            }, 100);
+        // Resolve with false (cancelled) if still pending
+        if (resolveRef.current) {
+            const resolve = resolveRef.current;
+            resolveRef.current = null;
+            resolve(false);
         }
-    }, [confirmState.onConfirm]);
+    }, []);
 
     const handleConfirm = useCallback(() => {
-        if (confirmState.onConfirm) {
-            confirmState.onConfirm();
+        // Resolve with true (confirmed)
+        if (resolveRef.current) {
+            const resolve = resolveRef.current;
+            resolveRef.current = null;
+            resolve(true);
         }
-        hideConfirm();
-    }, [confirmState.onConfirm, hideConfirm]);
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+    }, []);
+
+    const handleCancel = useCallback(() => {
+        // Resolve with false (cancelled)
+        if (resolveRef.current) {
+            const resolve = resolveRef.current;
+            resolveRef.current = null;
+            resolve(false);
+        }
+        setConfirmState(prev => ({ ...prev, isOpen: false }));
+    }, []);
 
     return {
         showConfirm,
@@ -59,7 +72,7 @@ export function useConfirm() {
             confirmText: confirmState.confirmText,
             cancelText: confirmState.cancelText,
             type: confirmState.type,
-            onClose: hideConfirm,
+            onClose: handleCancel,
             onConfirm: handleConfirm
         }
     };

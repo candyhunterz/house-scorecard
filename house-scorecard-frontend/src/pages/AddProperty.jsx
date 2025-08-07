@@ -1,5 +1,5 @@
 // src/pages/AddProperty.jsx
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext'; // Import context hook
 import { useToast } from '../contexts/ToastContext';
@@ -31,6 +31,7 @@ function AddProperty() {
 
   // State for Auto-Fill functionality
   const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFillStatus, setAutoFillStatus] = useState('');
 
   // --- Input Change Handlers ---
   // Simple handlers to update state based on input changes
@@ -55,9 +56,15 @@ function AddProperty() {
     }
 
     setIsAutoFilling(true);
+    setAutoFillStatus('🌐 Connecting to listing website...');
     
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+      
+      // Add a small delay to show the connecting status
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setAutoFillStatus('🔍 Analyzing page content...');
+      
       const response = await authenticatedFetch(`${API_BASE_URL}/properties/scrape_listing/`, {
         method: 'POST',
         headers: {
@@ -66,12 +73,16 @@ function AddProperty() {
         body: JSON.stringify({ url: listingUrl.trim() }),
       });
 
+      setAutoFillStatus('📝 Processing property data...');
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Scraping failed');
       }
 
       const data = await response.json();
+      
+      setAutoFillStatus('✨ Auto-filling form fields...');
       
       // Auto-fill form fields with scraped data
       if (data.address && !address.trim()) {
@@ -93,7 +104,7 @@ function AddProperty() {
         setImageUrlsString(data.images.join('\n'));
       }
 
-      showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
+      showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.`);
       
     } catch (error) {
       console.error('Auto-fill error:', error);
@@ -107,6 +118,7 @@ function AddProperty() {
       }
     } finally {
       setIsAutoFilling(false);
+      setAutoFillStatus('');
     }
   };
 
@@ -154,32 +166,38 @@ function AddProperty() {
 
   // --- Cancel Handler ---
   // Checks if any fields have data before navigating away
-  const handleCancel = async () => {
-    // List of all state values that indicate user input
-    const formHasData = [
-        address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes
-        // latitude, longitude // Add if using lat/lon state
-    ].some(value => value && value.trim()); // Check if any value is truthy after trimming
+  const handleCancel = useCallback(async () => {
+    try {
+      // List of all state values that indicate user input
+      const formHasData = [
+          address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes
+          // latitude, longitude // Add if using lat/lon state
+      ].some(value => value && value.toString().trim()); // Check if any value is truthy after trimming
 
-    if (formHasData) {
-        // Ask for confirmation only if there's data
-        const confirmed = await showConfirm({
-          title: "Discard Changes",
-          message: "You have unsaved changes. Are you sure you want to discard them and go back to the dashboard?",
-          confirmText: "Discard",
-          cancelText: "Stay",
-          type: "warning"
-        });
-        
-        if (confirmed) {
-            navigate('/properties');
-        }
-        // If user clicks 'Stay' on the confirmation, do nothing.
-    } else {
-        // If no data, navigate back without confirmation
-        navigate('/properties');
+      if (formHasData) {
+          // Ask for confirmation only if there's data
+          const confirmed = await showConfirm({
+            title: "Discard Changes",
+            message: "You have unsaved changes. Are you sure you want to discard them and go back to the dashboard?",
+            confirmText: "Discard",
+            cancelText: "Stay",
+            type: "warning"
+          });
+          
+          if (confirmed) {
+              navigate('/properties');
+          }
+          // If user clicks 'Stay' on the confirmation, do nothing.
+      } else {
+          // If no data, navigate back without confirmation
+          navigate('/properties');
+      }
+    } catch (error) {
+      console.error('Error in cancel handler:', error);
+      // Fallback - just navigate away
+      navigate('/properties');
     }
-  }; // End handleCancel
+  }, [address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes, showConfirm, navigate]); // End handleCancel
 
 
   // --- Render the Form ---
@@ -192,7 +210,7 @@ function AddProperty() {
 
         {/* Address Input (Required) */}
         <div className="form-group">
-          <label htmlFor="address">Address *</label>
+          <label htmlFor="address">Address </label>
           <input type="text" id="address" value={address} onChange={handleAddressChange} required aria-required="true"/>
         </div>
 
@@ -210,13 +228,13 @@ function AddProperty() {
               {isAutoFilling ? 'Auto-Filling...' : '🔄 Auto-Fill'}
             </button>
           </div>
-          {isAutoFilling && <small className="auto-fill-status">Scraping listing data, please wait...</small>}
+          {isAutoFilling && <small className="auto-fill-status">{autoFillStatus}</small>}
           {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
         </div>
 
         {/* Asking Price Input (Required, Number) */}
         <div className="form-group">
-          <label htmlFor="price">Asking Price *</label>
+          <label htmlFor="price">Asking Price </label>
           <input type="number" id="price" value={price} onChange={handlePriceChange} min="0" step="1" placeholder="e.g., 450000" required aria-required="true"/>
         </div>
 

@@ -22,7 +22,8 @@
       "Bash(\"./venv/Scripts/python.exe\":*)",
       "WebFetch(domain:www.realtor.ca)",
       "Bash(python test:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations core --name add_user_ownership)"
     ],
     "deny": []
   }

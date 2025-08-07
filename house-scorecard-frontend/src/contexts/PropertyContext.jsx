@@ -92,9 +92,9 @@ export function PropertyProvider({ children }) {
         baths: newPropertyData.baths, // Assumes already parsed
         sqft: newPropertyData.sqft,   // Assumes already parsed
         notes: newPropertyData.notes,
-        // Add latitude/longitude later if included in form
-        latitude: newPropertyData.latitude || null, // Example placeholder
-        longitude: newPropertyData.longitude || null, // Example placeholder
+        // Backend will handle geocoding automatically
+        latitude: newPropertyData.latitude || null,
+        longitude: newPropertyData.longitude || null,
         // Store the processed array of image URLs
         imageUrls: imageUrlsArray,
         // Defaults for new properties
@@ -547,6 +547,54 @@ export function PropertyProvider({ children }) {
     */
   }, [authenticatedFetch, properties]);
 
+  /** Geocodes properties that don't have coordinates using backend */
+  const geocodeProperties = useCallback(async () => {
+    const propertiesWithoutCoords = properties.filter(p => 
+      !p.latitude || !p.longitude
+    );
+    
+    if (propertiesWithoutCoords.length === 0) {
+      return { geocoded_count: 0, message: 'All properties already have coordinates' };
+    }
+
+    console.log(`CONTEXT: Geocoding ${propertiesWithoutCoords.length} properties via backend...`);
+    
+    try {
+      const response = await authenticatedFetch(getApiUrl('/properties/geocode_properties/'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Geocoding request failed');
+      }
+
+      const result = await response.json();
+      
+      // Refresh properties to get the updated coordinates
+      const refreshResponse = await authenticatedFetch(getApiUrl('/properties/'));
+      if (refreshResponse.ok) {
+        const updatedProperties = await refreshResponse.json();
+        const propertiesWithDefaults = updatedProperties.map(property => ({
+          ...property,
+          status: property.status !== undefined ? property.status : PROPERTY_STATUSES.UNSET,
+          statusHistory: Array.isArray(property.statusHistory) ? property.statusHistory : [],
+          ratings: property.ratings || {},
+          score: property.score !== undefined ? property.score : null,
+          imageUrls: Array.isArray(property.imageUrls) ? property.imageUrls : []
+        }));
+        setProperties(propertiesWithDefaults);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Geocoding failed:', error);
+      throw error;
+    }
+  }, [properties, authenticatedFetch]);
+
   // --- Memoize the context value object itself ---
   // Bundles all state and functions provided by the context
   const value = useMemo(() => ({
@@ -558,9 +606,10 @@ export function PropertyProvider({ children }) {
     deleteProperty,                // Memoized function
     updateProperty,                // Memoized function
     updatePropertyStatus,          // Memoized function
+    geocodeProperties,             // Memoized function
   }), [
       properties, // Re-memoize value object if properties array changes
-      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty, updatePropertyStatus // Include stable functions
+      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty, updatePropertyStatus, geocodeProperties // Include stable functions
   ]);
 
 

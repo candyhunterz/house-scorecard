@@ -35,8 +35,8 @@ class PropertySerializer(serializers.ModelSerializer):
         # Get all existing ratings for this property
         existing_ratings = {r.criterion.id: r.value for r in obj.ratings.all()}
         
-        # Include all criteria, with their rating values or appropriate defaults
-        for criterion in Criterion.objects.all():
+        # Include only criteria owned by the same user as the property
+        for criterion in Criterion.objects.filter(owner=obj.owner):
             value = existing_ratings.get(criterion.id)
             
             if value is not None:
@@ -53,9 +53,12 @@ class PropertySerializer(serializers.ModelSerializer):
         return ratings_dict
 
 class CriterionSerializer(serializers.ModelSerializer):
+    ratingType = serializers.CharField(source='rating_type', required=False, allow_null=True)
+    
     class Meta:
         model = Criterion
-        fields = '__all__'
+        fields = ('id', 'text', 'type', 'weight', 'category', 'ratingType', 'created_at', 'updated_at')
+        extra_kwargs = {'rating_type': {'write_only': True}}
 
 class RatingSerializer(serializers.ModelSerializer):
     class Meta:

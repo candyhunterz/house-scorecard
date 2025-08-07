@@ -14,12 +14,11 @@ function ConfirmDialog({
     if (!isOpen) return null;
 
     const handleConfirm = () => {
-        onConfirm();
-        onClose();
+        onConfirm(); // This will handle closing in the hook
     };
 
     const handleCancel = () => {
-        onClose();
+        onClose(); // This will handle cancelling in the hook
     };
 
     // Close on backdrop click
