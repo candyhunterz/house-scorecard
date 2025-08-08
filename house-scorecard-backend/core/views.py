@@ -183,67 +183,67 @@ def _scrape_with_playwright(url):
         # Apply stealth mode to avoid detection
         stealth = Stealth()
         stealth.apply_stealth_sync(page)
-            
-            # Set additional headers to appear more human-like
-            page.set_extra_http_headers({
-                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
-            })
-            
-            # For realtor.ca, do two-step approach
-            if 'realtor.ca' in url.lower():
-                try:
-                    logger.info("Step 1: Visiting realtor.ca homepage with Playwright")
-                    # First visit homepage to establish session
-                    page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=15000)
-                    
-                    # Short delay to save memory
-                    time.sleep(random.uniform(1.0, 2.0))
-                    logger.info("Homepage visit successful, proceeding to listing")
-                    
-                except Exception as e:
-                    logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
-            
-            # Navigate to target URL with shorter timeout
-            logger.info(f"Navigating to target URL: {url}")
-            response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
-            
-            if not response:
-                raise Exception("Failed to get response from page")
-            
-            # Wait for page to load with shorter timeout to prevent memory buildup
+        
+        # Set additional headers to appear more human-like
+        page.set_extra_http_headers({
+            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+        })
+        
+        # For realtor.ca, do two-step approach
+        if 'realtor.ca' in url.lower():
             try:
-                page.wait_for_load_state('networkidle', timeout=5000)
-            except:
-                logger.info("Network idle timeout reached, proceeding with current content")
-            
-            # Get page content
-            content = page.content()
-            logger.info(f"Page loaded successfully, content length: {len(content)} characters")
-            
-            # Check if we're still blocked
-            content_lower = content.lower()
-            if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check']):
-                if len(content) < 2000:
-                    logger.warning("Still detected as blocked by anti-bot protection")
-                    # Try waiting for any dynamic content
-                    try:
-                        page.wait_for_timeout(5000)  # Wait 5 seconds
-                        content = page.content()
-                        logger.info(f"Retried after timeout, new content length: {len(content)} characters")
-                    except:
-                        pass
-            
-            # Close only the page, keep browser/context for reuse (expert recommendation)
-            page.close()
-            
-            # Validate content
-            if len(content) < 5000:
-                raise Exception(f"Content too short ({len(content)} chars), likely still blocked")
-            
-            logger.info("Playwright scraping completed successfully")
-            return content
+                logger.info("Step 1: Visiting realtor.ca homepage with Playwright")
+                # First visit homepage to establish session
+                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=15000)
+                
+                # Short delay to save memory
+                time.sleep(random.uniform(1.0, 2.0))
+                logger.info("Homepage visit successful, proceeding to listing")
+                
+            except Exception as e:
+                logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
+        
+        # Navigate to target URL with shorter timeout
+        logger.info(f"Navigating to target URL: {url}")
+        response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
+        
+        if not response:
+            raise Exception("Failed to get response from page")
+        
+        # Wait for page to load with shorter timeout to prevent memory buildup
+        try:
+            page.wait_for_load_state('networkidle', timeout=5000)
+        except:
+            logger.info("Network idle timeout reached, proceeding with current content")
+        
+        # Get page content
+        content = page.content()
+        logger.info(f"Page loaded successfully, content length: {len(content)} characters")
+        
+        # Check if we're still blocked
+        content_lower = content.lower()
+        if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check']):
+            if len(content) < 2000:
+                logger.warning("Still detected as blocked by anti-bot protection")
+                # Try waiting for any dynamic content
+                try:
+                    page.wait_for_timeout(5000)  # Wait 5 seconds
+                    content = page.content()
+                    logger.info(f"Retried after timeout, new content length: {len(content)} characters")
+                except:
+                    pass
+        
+        # Close only the page, keep browser/context for reuse (expert recommendation)
+        page.close()
+        
+        # Validate content
+        if len(content) < 5000:
+            raise Exception(f"Content too short ({len(content)} chars), likely still blocked")
+        
+        logger.info("Playwright scraping completed successfully")
+        return content
             
     except Exception as e:
         logger.error(f"Playwright scraping failed: {str(e)}")
