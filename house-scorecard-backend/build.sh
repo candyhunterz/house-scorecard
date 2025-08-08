@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
-# exit on error
-set -o errexit
-
+#\!/bin/bash
+echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
-python manage.py collectstatic --no-input
-python manage.py migrate
+echo "Installing Playwright browsers..."
+python -m playwright install chromium
+
+echo "Build complete\!"

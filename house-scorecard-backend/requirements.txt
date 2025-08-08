@@ -27,3 +27,8 @@ kombu==5.4.2
 
 # Additional utilities for production
 python-dateutil==2.9.0
+
+# Advanced Scraping Dependencies
+curl_cffi==0.13.0
+playwright==1.54.0
+playwright-stealth==2.0.0

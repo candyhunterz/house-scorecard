@@ -10,6 +10,15 @@ import json
 import requests
 from curl_cffi import requests as cf_requests
 from bs4 import BeautifulSoup
+# Playwright imports with fallback handling
+try:
+    from playwright.sync_api import sync_playwright
+    from playwright_stealth.stealth import Stealth
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError as e:
+    PLAYWRIGHT_AVAILABLE = False
+    sync_playwright = None
+    Stealth = None
 from urllib.parse import urljoin, urlparse
 import time
 import random
@@ -51,6 +60,104 @@ def geocode_address(address):
     except Exception as e:
         logger.error(f'Geocoding failed for address "{address}": {str(e)}')
         return None
+
+def _scrape_with_playwright(url):
+    """
+    Advanced scraping using Playwright with stealth mode for bypassing sophisticated anti-bot protection.
+    """
+    if not PLAYWRIGHT_AVAILABLE:
+        raise Exception("Playwright not available - falling back to curl_cffi")
+    
+    logger.info(f"Starting Playwright scraping for: {url}")
+    
+    try:
+        with sync_playwright() as p:
+            # Launch browser with stealth settings
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-extensions',
+                    '--no-first-run',
+                    '--disable-default-apps',
+                    '--disable-features=TranslateUI',
+                    '--disable-ipc-flooding-protection',
+                    '--window-size=1920,1080'
+                ]
+            )
+            
+            # Create new page with realistic viewport
+            page = browser.new_page(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+            
+            # Apply stealth mode to avoid detection
+            stealth = Stealth()
+            stealth.apply_stealth_sync(page)
+            
+            # Set additional headers to appear more human-like
+            page.set_extra_http_headers({
+                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+            })
+            
+            # For realtor.ca, do two-step approach
+            if 'realtor.ca' in url.lower():
+                try:
+                    logger.info("Step 1: Visiting realtor.ca homepage with Playwright")
+                    # First visit homepage to establish session
+                    page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=30000)
+                    
+                    # Human-like delay
+                    time.sleep(random.uniform(2.0, 4.0))
+                    logger.info("Homepage visit successful, proceeding to listing")
+                    
+                except Exception as e:
+                    logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
+            
+            # Navigate to target URL
+            logger.info(f"Navigating to target URL: {url}")
+            response = page.goto(url, wait_until='domcontentloaded', timeout=30000)
+            
+            if not response:
+                raise Exception("Failed to get response from page")
+            
+            # Wait for page to load completely
+            page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # Get page content
+            content = page.content()
+            logger.info(f"Page loaded successfully, content length: {len(content)} characters")
+            
+            # Check if we're still blocked
+            content_lower = content.lower()
+            if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check']):
+                if len(content) < 2000:
+                    logger.warning("Still detected as blocked by anti-bot protection")
+                    # Try waiting for any dynamic content
+                    try:
+                        page.wait_for_timeout(5000)  # Wait 5 seconds
+                        content = page.content()
+                        logger.info(f"Retried after timeout, new content length: {len(content)} characters")
+                    except:
+                        pass
+            
+            browser.close()
+            
+            # Validate content
+            if len(content) < 5000:
+                raise Exception(f"Content too short ({len(content)} chars), likely still blocked")
+            
+            logger.info("Playwright scraping completed successfully")
+            return content
+            
+    except Exception as e:
+        logger.error(f"Playwright scraping failed: {str(e)}")
+        raise e
 
 # Configure logger for scraping operations
 logger = logging.getLogger(__name__)
@@ -667,10 +774,33 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if is_zealty:
             return self._scrape_zealty(url, session or cf_requests.Session(impersonate="chrome120"))
         
+        # Strategy 1: Try Playwright first for sites with strong anti-bot protection
+        if is_realtor_ca and PLAYWRIGHT_AVAILABLE:
+            try:
+                logger.info("Attempting Playwright scraping for realtor.ca (better anti-bot bypass)")
+                content = _scrape_with_playwright(url)
+                logger.info("Playwright scraping successful, parsing content")
+                
+                # Parse with BeautifulSoup
+                soup = BeautifulSoup(content, 'html.parser')
+                result = self._parse_realtor_ca(soup, url)
+                
+                # Apply image optimization if we found images
+                if result.get('images') and len(result['images']) > 0:
+                    result['images'] = self._validate_and_optimize_images(result['images'])
+                
+                return result
+                
+            except Exception as e:
+                logger.warning(f"Playwright scraping failed: {str(e)}")
+                logger.info("Falling back to curl_cffi method")
+        
+        # Strategy 2: Fall back to curl_cffi method
         for attempt in range(max_attempts):
             try:
                 logger.info(f"Scraping attempt {attempt + 1}/{max_attempts} for URL: {url}")
-                logger.info("Using curl_cffi with Chrome120 impersonation to bypass anti-bot protection")
+                if attempt == 0:
+                    logger.info("Using curl_cffi with browser impersonation as fallback method")
                 
                 # Use curl_cffi session with browser impersonation to bypass anti-bot protection
                 # Try different browser fingerprints for better success rate
