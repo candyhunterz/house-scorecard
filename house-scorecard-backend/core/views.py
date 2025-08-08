@@ -186,54 +186,96 @@ def _scrape_with_playwright(url):
         
         # Set additional headers to appear more human-like
         page.set_extra_http_headers({
-            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8,fr;q=0.7',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-User': '?1',
+            'Sec-Fetch-Dest': 'document',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'max-age=0'
         })
         
-        # For realtor.ca, do two-step approach
+        # For realtor.ca, use enhanced multi-step approach to bypass detection
         if 'realtor.ca' in url.lower():
             try:
-                logger.info("Step 1: Visiting realtor.ca homepage with Playwright")
+                logger.info("Step 1: Visiting realtor.ca homepage with enhanced stealth")
+                
                 # First visit homepage to establish session
                 page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=15000)
                 
-                # Short delay to save memory
-                time.sleep(random.uniform(1.0, 2.0))
-                logger.info("Homepage visit successful, proceeding to listing")
+                # Simulate human behavior - scroll and mouse movement
+                page.evaluate("window.scrollTo(0, Math.floor(Math.random() * 500))")
+                time.sleep(random.uniform(2.0, 4.0))
+                
+                # Simulate clicking on a common element to appear more human
+                try:
+                    page.evaluate("document.body.click()")
+                except:
+                    pass
+                
+                # Random delay before proceeding
+                time.sleep(random.uniform(1.5, 3.0))
+                logger.info("Homepage interaction complete, proceeding to target")
                 
             except Exception as e:
                 logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
         
-        # Navigate to target URL with shorter timeout
+        # Navigate to target URL with realistic behavior
         logger.info(f"Navigating to target URL: {url}")
         response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
         
         if not response:
             raise Exception("Failed to get response from page")
         
+        # Simulate human reading/browsing behavior
+        page.evaluate("window.scrollTo(0, Math.floor(Math.random() * 300))")
+        time.sleep(random.uniform(1.0, 2.5))
+        
         # Wait for page to load with shorter timeout to prevent memory buildup
         try:
-            page.wait_for_load_state('networkidle', timeout=5000)
+            page.wait_for_load_state('networkidle', timeout=8000)
         except:
             logger.info("Network idle timeout reached, proceeding with current content")
+            
+        # Additional human-like interaction before getting content
+        try:
+            page.evaluate("document.documentElement.scrollTop = Math.floor(Math.random() * 200)")
+            time.sleep(random.uniform(0.5, 1.5))
+        except:
+            pass
         
         # Get page content
         content = page.content()
         logger.info(f"Page loaded successfully, content length: {len(content)} characters")
         
-        # Check if we're still blocked
+        # Check if we're still blocked with enhanced detection
         content_lower = content.lower()
-        if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check']):
-            if len(content) < 2000:
-                logger.warning("Still detected as blocked by anti-bot protection")
-                # Try waiting for any dynamic content
-                try:
-                    page.wait_for_timeout(5000)  # Wait 5 seconds
-                    content = page.content()
-                    logger.info(f"Retried after timeout, new content length: {len(content)} characters")
-                except:
-                    pass
+        blocked_indicators = ['incapsula', 'blocked', 'security check', 'access denied', 'cloudflare', 'protection', 'ddos', 'bot detected']
+        
+        if any(indicator in content_lower for indicator in blocked_indicators) or len(content) < 3000:
+            logger.warning(f"Potential blocking detected - content length: {len(content)}, trying enhanced bypass")
+            
+            # Enhanced retry with more human-like behavior
+            try:
+                # Simulate mouse movement and additional delays
+                page.mouse.move(random.randint(100, 400), random.randint(100, 300))
+                time.sleep(random.uniform(2.0, 4.0))
+                
+                # Scroll more naturally
+                for _ in range(3):
+                    page.evaluate(f"window.scrollBy(0, {random.randint(50, 200)})")
+                    time.sleep(random.uniform(0.8, 1.5))
+                
+                # Wait longer and retry content
+                page.wait_for_timeout(8000)
+                content = page.content()
+                logger.info(f"Enhanced retry complete, new content length: {len(content)} characters")
+                
+            except Exception as retry_error:
+                logger.warning(f"Enhanced retry failed: {retry_error}")
+                pass
         
         # Close only the page, keep browser/context for reuse (expert recommendation)
         page.close()
