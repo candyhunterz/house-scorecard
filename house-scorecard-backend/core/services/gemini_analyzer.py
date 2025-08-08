@@ -161,8 +161,21 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 config=types.GenerateContentConfig(**config_params)
             )
             
-            # Parse response
+            # Parse response with better error handling
             if response.text:
+                logger.info(f"Received response from Gemini API, length: {len(response.text)} chars")
+                
+                # Log first 200 chars to debug HTML/JSON issues
+                preview = response.text[:200].replace('\n', ' ')
+                logger.info(f"Response preview: {preview}")
+                
+                # Check if response looks like HTML (error page)
+                if response.text.strip().startswith('<!doctype') or response.text.strip().startswith('<html'):
+                    logger.error(f"Received HTML error page instead of JSON: {response.text[:500]}")
+                    return self.validate_analysis_response({
+                        "analysis_summary": "AI service returned HTML error page instead of analysis"
+                    })
+                
                 analysis_result = self.safe_parse_json_response(response.text)
                 logger.info(f"AI analysis completed with confidence: {analysis_result.get('confidence_score', 0)}")
                 return analysis_result

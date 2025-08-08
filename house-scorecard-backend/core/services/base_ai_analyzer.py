@@ -189,8 +189,18 @@ Provide analysis in this EXACT JSON format:
                 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response as JSON: {e}")
-            logger.error(f"Response text: {text_response}")
-            return self.validate_analysis_response({})
+            logger.error(f"Response text preview (first 500 chars): {text_response[:500]}")
+            
+            # Check if it's an HTML error
+            if text_response.strip().startswith('<!doctype') or text_response.strip().startswith('<html'):
+                logger.error("AI service returned HTML error page instead of JSON")
+                return self.validate_analysis_response({
+                    "analysis_summary": "AI service returned HTML error page - check API key and service status"
+                })
+            
+            return self.validate_analysis_response({
+                "analysis_summary": f"Failed to parse AI response as JSON: {str(e)}"
+            })
         except Exception as e:
             logger.error(f"Unexpected error parsing AI response: {e}")
             return self.validate_analysis_response({})
