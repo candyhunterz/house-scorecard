@@ -34,7 +34,17 @@ export function PropertyProvider({ children }) {
             // Ensure other frontend fields exist
             ratings: property.ratings || {},
             score: property.score !== undefined ? property.score : null,  
-            imageUrls: Array.isArray(property.imageUrls) ? property.imageUrls : []
+            imageUrls: Array.isArray(property.imageUrls) ? property.imageUrls : [],
+            // Ensure AI analysis fields are included
+            aiAnalysis: property.aiAnalysis || null,
+            aiOverallGrade: property.aiOverallGrade || null,
+            aiRedFlags: property.aiRedFlags || null,
+            aiPositiveIndicators: property.aiPositiveIndicators || null,
+            aiPriceAssessment: property.aiPriceAssessment || null,
+            aiBuyerRecommendation: property.aiBuyerRecommendation || null,
+            aiConfidenceScore: property.aiConfidenceScore || null,
+            aiAnalysisSummary: property.aiAnalysisSummary || null,
+            aiAnalysisDate: property.aiAnalysisDate || null
           }));
           
           console.log('CONTEXT: Properties loaded from backend:', propertiesWithDefaults);
@@ -105,7 +115,8 @@ export function PropertyProvider({ children }) {
     };
 
     try {
-      // Create backend payload (backend now fully supports all fields)
+      
+      // Create backend payload (backend now fully supports all fields including AI analysis)
       const backendProperty = {
         address: propertyWithId.address,
         listingUrl: propertyWithId.listingUrl,
@@ -119,8 +130,22 @@ export function PropertyProvider({ children }) {
         imageUrls: propertyWithId.imageUrls,
         status: propertyWithId.status,
         statusHistory: propertyWithId.statusHistory,
-        score: propertyWithId.score
+        score: propertyWithId.score,
+        // Include AI analysis fields if present in the original data
+        ...(newPropertyData.aiAnalysis && {
+          aiAnalysis: newPropertyData.aiAnalysis,
+          aiOverallGrade: newPropertyData.aiOverallGrade,
+          aiRedFlags: newPropertyData.aiRedFlags,
+          aiPositiveIndicators: newPropertyData.aiPositiveIndicators,
+          aiPriceAssessment: newPropertyData.aiPriceAssessment,
+          aiBuyerRecommendation: newPropertyData.aiBuyerRecommendation,
+          aiConfidenceScore: newPropertyData.aiConfidenceScore,
+          aiAnalysisSummary: newPropertyData.aiAnalysisSummary,
+          aiAnalysisDate: newPropertyData.aiAnalysisDate
+        })
       };
+      
+      console.log("CONTEXT: backendProperty being sent to API:", backendProperty);
 
       const response = await authenticatedFetch(getApiUrl('/properties/'), {
         method: 'POST',
@@ -133,14 +158,24 @@ export function PropertyProvider({ children }) {
         throw new Error('Network response was not ok');
       }
       const savedProperty = await response.json();
-      // Ensure saved property has all frontend fields
+      // Ensure saved property has all frontend fields including AI analysis
       const savedPropertyWithDefaults = {
         ...savedProperty,
         status: savedProperty.status !== undefined ? savedProperty.status : PROPERTY_STATUSES.UNSET,
         statusHistory: Array.isArray(savedProperty.statusHistory) ? savedProperty.statusHistory : [],
         ratings: savedProperty.ratings || {},
         score: savedProperty.score !== undefined ? savedProperty.score : null,
-        imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : []
+        imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : [],
+        // Ensure AI analysis fields are included
+        aiAnalysis: savedProperty.aiAnalysis || null,
+        aiOverallGrade: savedProperty.aiOverallGrade || null,
+        aiRedFlags: savedProperty.aiRedFlags || null,
+        aiPositiveIndicators: savedProperty.aiPositiveIndicators || null,
+        aiPriceAssessment: savedProperty.aiPriceAssessment || null,
+        aiBuyerRecommendation: savedProperty.aiBuyerRecommendation || null,
+        aiConfidenceScore: savedProperty.aiConfidenceScore || null,
+        aiAnalysisSummary: savedProperty.aiAnalysisSummary || null,
+        aiAnalysisDate: savedProperty.aiAnalysisDate || null
       };
       
       setProperties(prevProperties => {
@@ -428,9 +463,33 @@ export function PropertyProvider({ children }) {
         throw new Error('Network response was not ok');
       }
       const savedProperty = await response.json();
-      setProperties(prevProperties =>
-        prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
-      );
+      
+      // Ensure saved property has all frontend fields including AI analysis
+      const savedPropertyWithDefaults = {
+        ...savedProperty,
+        status: savedProperty.status !== undefined ? savedProperty.status : PROPERTY_STATUSES.UNSET,
+        statusHistory: Array.isArray(savedProperty.statusHistory) ? savedProperty.statusHistory : [],
+        ratings: savedProperty.ratings || {},
+        score: savedProperty.score !== undefined ? savedProperty.score : null,
+        imageUrls: Array.isArray(savedProperty.imageUrls) ? savedProperty.imageUrls : [],
+        // Ensure AI analysis fields are included
+        aiAnalysis: savedProperty.aiAnalysis || null,
+        aiOverallGrade: savedProperty.aiOverallGrade || null,
+        aiRedFlags: savedProperty.aiRedFlags || null,
+        aiPositiveIndicators: savedProperty.aiPositiveIndicators || null,
+        aiPriceAssessment: savedProperty.aiPriceAssessment || null,
+        aiBuyerRecommendation: savedProperty.aiBuyerRecommendation || null,
+        aiConfidenceScore: savedProperty.aiConfidenceScore || null,
+        aiAnalysisSummary: savedProperty.aiAnalysisSummary || null,
+        aiAnalysisDate: savedProperty.aiAnalysisDate || null
+      };
+      
+      setProperties(prevProperties => {
+        const newProperties = prevProperties.map(prop => (prop.id === savedPropertyWithDefaults.id ? savedPropertyWithDefaults : prop));
+        // Save updated properties to localStorage
+        localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
+        return newProperties;
+      });
     } catch (error) {
       console.error('Failed to update property:', error);
     }
@@ -547,6 +606,64 @@ export function PropertyProvider({ children }) {
     */
   }, [authenticatedFetch, properties]);
 
+  /** Triggers AI analysis for a specific property */
+  const analyzePropertyWithAI = useCallback(async (propertyId) => {
+    try {
+      console.log(`CONTEXT: Triggering AI analysis for property ${propertyId}`);
+      
+      const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/analyze_with_ai/`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'AI analysis failed');
+      }
+
+      const result = await response.json();
+      
+      // Update the property in local state with new AI analysis data
+      if (result.success && result.property) {
+        setProperties(prevProperties => {
+          const updatedProperties = prevProperties.map(prop =>
+            prop.id === parseInt(propertyId, 10) ? {
+              ...result.property,
+              // Ensure frontend field compatibility
+              statusHistory: Array.isArray(result.property.statusHistory) ? result.property.statusHistory : [],
+              ratings: result.property.ratings || {},
+              imageUrls: Array.isArray(result.property.imageUrls) ? result.property.imageUrls : [],
+              // Ensure AI analysis fields are included
+              aiAnalysis: result.property.aiAnalysis || null,
+              aiOverallGrade: result.property.aiOverallGrade || null,
+              aiRedFlags: result.property.aiRedFlags || null,
+              aiPositiveIndicators: result.property.aiPositiveIndicators || null,
+              aiPriceAssessment: result.property.aiPriceAssessment || null,
+              aiBuyerRecommendation: result.property.aiBuyerRecommendation || null,
+              aiConfidenceScore: result.property.aiConfidenceScore || null,
+              aiAnalysisSummary: result.property.aiAnalysisSummary || null,
+              aiAnalysisDate: result.property.aiAnalysisDate || null
+            } : prop
+          );
+          
+          // Save updated properties to localStorage
+          localStorage.setItem('houseScorecard_properties', JSON.stringify(updatedProperties));
+          
+          return updatedProperties;
+        });
+        
+        console.log(`CONTEXT: Property ${propertyId} AI analysis completed successfully`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to analyze property with AI:', error);
+      throw error;
+    }
+  }, [authenticatedFetch]);
+
   /** Geocodes properties that don't have coordinates using backend */
   const geocodeProperties = useCallback(async () => {
     const propertiesWithoutCoords = properties.filter(p => 
@@ -607,9 +724,10 @@ export function PropertyProvider({ children }) {
     updateProperty,                // Memoized function
     updatePropertyStatus,          // Memoized function
     geocodeProperties,             // Memoized function
+    analyzePropertyWithAI,         // Memoized function
   }), [
       properties, // Re-memoize value object if properties array changes
-      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty, updatePropertyStatus, geocodeProperties // Include stable functions
+      addProperty, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updateProperty, updatePropertyStatus, geocodeProperties, analyzePropertyWithAI // Include stable functions
   ]);
 
 

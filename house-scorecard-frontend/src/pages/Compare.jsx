@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useProperties } from '../contexts/PropertyContext';
 import { useCriteria } from '../contexts/CriteriaContext';
+import AIComparisonSummary from '../components/AIComparisonSummary';
 import './Compare.css';
 import { Link } from 'react-router-dom';
 
@@ -273,6 +274,9 @@ function Compare() {
           </tbody>
         </table>
       </div>
+
+      {/* AI Comparison Summary - At Bottom */}
+      <AIComparisonSummary properties={sortedProperties} />
     </div>
   );
 }

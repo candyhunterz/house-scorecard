@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,10 +39,12 @@ sentry_sdk.init(
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-5*4s8i0g2b39lja_+jaxp)5r6uio$13e^%vr5rdr1g8&csp%hl')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') != 'False'
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ['true', '1', 'yes']
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'https://house-scorecard.vercel.app']
 
@@ -61,6 +67,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'whitenoise.runserver_nostatic',
+    'django_celery_results',
     # Your apps
     'core',
 ]
@@ -172,3 +179,32 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'https://house-scorecard.vercel.app', # Replace with your Vercel URL
 ]
+
+# AI Analysis settings
+AI_PROVIDER = os.environ.get('AI_PROVIDER', 'gemini')  # Default to Gemini
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')  # Required for Gemini
+GEMINI_MODEL_NAME = os.environ.get('GEMINI_MODEL_NAME', 'gemini-2.0-flash-exp')  # Updated to match analyzer
+AI_MAX_IMAGES_PER_ANALYSIS = int(os.environ.get('AI_MAX_IMAGES_PER_ANALYSIS', '6'))  # Limit images for cost control
+
+# Gemini Thinking Configuration
+# -1 = Dynamic thinking (model decides), 0 = No thinking, >0 = Fixed budget
+GEMINI_THINKING_BUDGET = int(os.environ.get('GEMINI_THINKING_BUDGET', '-1'))
+
+# Environment validation for AI settings
+if AI_PROVIDER == 'gemini' and not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable must be set when using Gemini AI provider")
+
+# Validate AI settings
+if AI_MAX_IMAGES_PER_ANALYSIS < 1 or AI_MAX_IMAGES_PER_ANALYSIS > 20:
+    raise ValueError("AI_MAX_IMAGES_PER_ANALYSIS must be between 1 and 20")
+
+# Celery Configuration for background AI processing
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# OpenAI settings (for future use)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')  # Optional, for future OpenAI integration

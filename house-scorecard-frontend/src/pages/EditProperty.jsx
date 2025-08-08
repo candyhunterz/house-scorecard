@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProperties } from '../contexts/PropertyContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import AIInsights from '../components/AIInsights';
 import './AddProperty.css'; // Re-use the styling from AddProperty
 
 function EditProperty() {
@@ -26,6 +27,7 @@ function EditProperty() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isAutoFilling, setIsAutoFilling] = useState(false);
+    const [aiAnalysisData, setAiAnalysisData] = useState(null);
 
     useEffect(() => {
         const fetchedProperty = getPropertyById(propertyId);
@@ -104,7 +106,21 @@ function EditProperty() {
             }
 
             setFormData(updatedFormData);
-            showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
+            
+            // Handle AI analysis if available
+            if (data.ai_analysis) {
+                setAiAnalysisData(data.ai_analysis);
+                const grade = data.ai_analysis.overall_grade || 'Unknown';
+                const redFlagsCount = data.ai_analysis.red_flags?.length || 0;
+                
+                if (redFlagsCount > 0) {
+                    showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} with ${redFlagsCount} potential issues detected.`);
+                } else {
+                    showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} - No major issues detected!`);
+                }
+            } else {
+                showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
+            }
             
         } catch (error) {
             console.error('Auto-fill error:', error);
@@ -142,6 +158,18 @@ function EditProperty() {
                 .split(/[\n,]+/) // Split by newline OR comma
                 .map(url => url.trim())
                 .filter(url => url && url.length > 5), // Basic validation
+            // Include AI analysis data if available
+            ...(aiAnalysisData && {
+                aiAnalysis: aiAnalysisData,
+                aiOverallGrade: aiAnalysisData.overall_grade,
+                aiRedFlags: aiAnalysisData.red_flags,
+                aiPositiveIndicators: aiAnalysisData.positive_indicators,
+                aiPriceAssessment: aiAnalysisData.price_assessment,
+                aiBuyerRecommendation: aiAnalysisData.buyer_recommendation,
+                aiConfidenceScore: aiAnalysisData.confidence_score,
+                aiAnalysisSummary: aiAnalysisData.analysis_summary,
+                aiAnalysisDate: new Date().toISOString()
+            }),
         };
 
         try {
@@ -191,7 +219,7 @@ function EditProperty() {
                             name="listingUrl"
                             value={formData.listingUrl}
                             onChange={handleChange}
-                            placeholder="e.g., https://www.realtor.ca/..."
+                            placeholder="e.g., https://www.realtor.ca/... or https://zealty.ca/..."
                         />
                         <button 
                             type="button" 
@@ -203,7 +231,7 @@ function EditProperty() {
                         </button>
                     </div>
                     {isAutoFilling && <small className="auto-fill-status">Scraping listing data, please wait...</small>}
-                    {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
+                    {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, Zealty.ca, HouseSigma.com, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
                 </div>
                 <div className="form-group">
                     <label htmlFor="price">Price:</label>
@@ -274,6 +302,24 @@ function EditProperty() {
                         placeholder="Paste image URLs here"
                     ></textarea>
                 </div>
+                
+                {/* AI Analysis Preview */}
+                {aiAnalysisData && (
+                    <div className="ai-analysis-preview">
+                        <h3>🤖 AI Analysis Preview</h3>
+                        <AIInsights property={{
+                            aiAnalysis: aiAnalysisData,
+                            aiOverallGrade: aiAnalysisData.overall_grade,
+                            aiRedFlags: aiAnalysisData.red_flags,
+                            aiPositiveIndicators: aiAnalysisData.positive_indicators,
+                            aiPriceAssessment: aiAnalysisData.price_assessment,
+                            aiBuyerRecommendation: aiAnalysisData.buyer_recommendation,
+                            aiConfidenceScore: aiAnalysisData.confidence_score,
+                            aiAnalysisSummary: aiAnalysisData.analysis_summary
+                        }} />
+                    </div>
+                )}
+                
                 <div className="form-actions">
                     <button type="submit" className="btn btn-primary">Save Changes</button>
                     <button type="button" onClick={() => navigate(`/properties/${propertyId}`)} className="btn btn-secondary">Cancel</button>

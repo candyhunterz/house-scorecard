@@ -23,7 +23,27 @@
       "WebFetch(domain:www.realtor.ca)",
       "Bash(python test:*)",
       "Bash(python:*)",
-      "Bash(./venv/Scripts/python.exe manage.py makemigrations core --name add_user_ownership)"
+      "Bash(./venv/Scripts/python.exe manage.py makemigrations core --name add_user_ownership)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(./venv/Scripts/python.exe -c \"import google.generativeai as genai; print(genai.__version__)\")",
+      "Bash(./venv/Scripts/python.exe -m pip install --upgrade google-generativeai)",
+      "Bash(./venv/Scripts/python.exe -c \"import google.generativeai as genai; print(genai.__version__)\")",
+      "Bash(./venv/Scripts/python.exe -c \"from core.services.gemini_analyzer import get_ai_analyzer; analyzer = get_ai_analyzer(); print(''AI analyzer created successfully'')\")",
+      "Bash(./venv/Scripts/python.exe test_ai_fix.py:*)",
+      "Bash(./venv/Scripts/python.exe -m pip uninstall:*)",
+      "Bash(./venv/Scripts/python.exe -m pip install:*)",
+      "Bash(./venv/Scripts/python.exe -m pip index versions google-generativeai)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(./venv/Scripts/python.exe test_new_sdk.py:*)",
+      "Bash(./venv/Scripts/python.exe test_property_ai.py:*)",
+      "Bash(./venv/Scripts/python.exe test_ai_batching.py:*)",
+      "Bash(./venv/Scripts/python.exe manage.py shell)",
+      "WebFetch(domain:housesigma.com)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "WebFetch(domain:www.zealty.ca)",
+      "Bash(\"venv\\Scripts\\python.exe\" debug_test.py)",
+      "Bash(pip freeze)"
     ],
     "deny": []
   }

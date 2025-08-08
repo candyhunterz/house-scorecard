@@ -147,6 +147,16 @@ function BulkImport() {
       platform: 'ViewPoint.ca',
       headers: 'Property Address, Asking Price, BR, BA, Living Area, URL',
       example: '456 Oak Ave Halifax NS B3H 2R2, CAD $475,000, 2, 1.5, 950, https://...'
+    },
+    {
+      platform: 'HouseSigma.com',
+      headers: 'Address, Price, Bedrooms, Bathrooms, Square Feet, Listing URL',
+      example: '789 Pine St Vancouver BC V6B 1A1, $750,000, 2, 2, 1100, https://housesigma.com/...'
+    },
+    {
+      platform: 'Zealty.ca',
+      headers: 'Address, Price, Bedrooms, Bathrooms, Square Feet, MLS Number',
+      example: '123 Oak St Richmond BC V6Y 1A1, $599,000, 3, 2, 1200, R1234567'
     }
   ];
 

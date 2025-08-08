@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PropertyViewSet, CriterionViewSet, RatingViewSet, UserCreate
+from .views import PropertyViewSet, CriterionViewSet, RatingViewSet, UserCreate, HealthCheckView
 
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
@@ -12,4 +12,5 @@ router.register(r'ratings', RatingViewSet, basename='rating')
 urlpatterns = [
     path('', include(router.urls)),
     path('register/', UserCreate.as_view(), name='register'),
+    path('health/', HealthCheckView.as_view(), name='health-check'),
 ]

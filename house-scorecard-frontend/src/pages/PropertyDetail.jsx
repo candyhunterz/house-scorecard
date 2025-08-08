@@ -11,6 +11,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { StatusSelector, StatusHistory } from '../components/PropertyStatus';
 import { PROPERTY_STATUSES } from '../constants/propertyStatus';
 import ScoreBreakdown from '../components/ScoreBreakdown'; // Import the breakdown component
+import AIInsights from '../components/AIInsights'; // Import AI insights component
 import './PropertyDetail.css'; // Ensure CSS is imported
 
 // --- Reusable Rating Input Component ---
@@ -117,8 +118,8 @@ const calculateScore = (ratings, mustHaves, niceToHaves, dealBreakers) => {
 // --- Main PropertyDetail Component ---
 function PropertyDetail() {
     const { propertyId } = useParams();
-    // Get context functions including updatePropertyImages
-    const { properties, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updatePropertyStatus } = useProperties();
+    // Get context functions including updatePropertyImages and analyzePropertyWithAI
+    const { properties, getPropertyById, updatePropertyRatingsAndScore, updatePropertyImages, deleteProperty, updatePropertyStatus, analyzePropertyWithAI } = useProperties();
     const { mustHaves, niceToHaves, dealBreakers } = useCriteria();
     const { showSuccess, showError, showWarning } = useToast();
     const { showConfirm, confirmDialog } = useConfirm();
@@ -135,6 +136,8 @@ function PropertyDetail() {
     const [newImageUrlsString, setNewImageUrlsString] = useState('');
     // Track previous ratings to prevent score updates when only status changes
     const [prevRatings, setPrevRatings] = useState({});
+    // AI analysis state
+    const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
 
     // --- Effects ---
     // Effect 1: Load property data and set INITIAL state when propertyId changes
@@ -144,6 +147,12 @@ function PropertyDetail() {
         setProperty(null); setRatings({}); setCalculatedScore(null); setInitialRatingsLoaded(false); setPrevRatings({}); // Clear previous state
         const fetchedProperty = getPropertyById(propertyId); // Get data from context
         if (fetchedProperty) {
+            console.log('PROPERTY DETAIL: Loaded property:', fetchedProperty);
+            console.log('PROPERTY DETAIL: AI fields in property:', {
+                aiAnalysis: fetchedProperty.aiAnalysis,
+                aiOverallGrade: fetchedProperty.aiOverallGrade,
+                aiRedFlags: fetchedProperty.aiRedFlags?.length
+            });
             setProperty(fetchedProperty); // Set the main property object
             const initialRatings = fetchedProperty.ratings || {}; // Get ratings (or empty obj)
             setRatings(initialRatings); // Set local ratings state for inputs
@@ -325,6 +334,48 @@ function PropertyDetail() {
         }
     };
 
+    const handleAIAnalysis = async () => {
+        if (!property) return;
+        
+        // Check if property has images
+        if (!property.imageUrls || property.imageUrls.length === 0) {
+            showError('Property must have images for AI analysis');
+            return;
+        }
+        
+        setIsAnalyzingAI(true);
+        
+        try {
+            showSuccess('AI analysis started... This may take a moment.');
+            
+            const result = await analyzePropertyWithAI(property.id);
+            
+            if (result.success) {
+                // Update local property state with new AI data
+                const updatedProperty = result.property;
+                setProperty(prevProperty => ({
+                    ...prevProperty,
+                    aiAnalysis: updatedProperty.aiAnalysis,
+                    aiOverallGrade: updatedProperty.aiOverallGrade,
+                    aiRedFlags: updatedProperty.aiRedFlags,
+                    aiPositiveIndicators: updatedProperty.aiPositiveIndicators,
+                    aiPriceAssessment: updatedProperty.aiPriceAssessment,
+                    aiBuyerRecommendation: updatedProperty.aiBuyerRecommendation,
+                    aiConfidenceScore: updatedProperty.aiConfidenceScore,
+                    aiAnalysisSummary: updatedProperty.aiAnalysisSummary,
+                    aiAnalysisDate: updatedProperty.aiAnalysisDate
+                }));
+                
+                showSuccess(`AI analysis completed! Grade: ${updatedProperty.aiOverallGrade || 'N/A'}`);
+            }
+        } catch (error) {
+            console.error('AI analysis failed:', error);
+            showError(`AI analysis failed: ${error.message}`);
+        } finally {
+            setIsAnalyzingAI(false);
+        }
+    };
+
     // --- Helper Functions ---
     const formatPrice = (price) => {
        if (price == null || isNaN(Number(price))) { return 'N/A'; }
@@ -488,6 +539,46 @@ function PropertyDetail() {
                  </div>
             )}
             {/* --- End Score Breakdown Section --- */}
+
+            {/* --- AI Insights Section --- */}
+            <div className="detail-section ai-insights-section">
+                <div className="ai-insights-header">
+                    <h2><i className="fas fa-robot"></i> AI Property Analysis</h2>
+                    {property.imageUrls && property.imageUrls.length > 0 && (
+                        <button 
+                            className={`btn ${property.aiAnalysis ? 'btn-secondary' : 'btn-primary'}`}
+                            onClick={handleAIAnalysis}
+                            disabled={isAnalyzingAI}
+                        >
+                            {isAnalyzingAI ? (
+                                <>
+                                    <i className="fas fa-spinner fa-spin"></i> Analyzing...
+                                </>
+                            ) : property.aiAnalysis ? (
+                                <>
+                                    <i className="fas fa-sync-alt"></i> Re-analyze with AI
+                                </>
+                            ) : (
+                                <>
+                                    <i className="fas fa-magic"></i> Analyze with AI
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+                <AIInsights property={property} />
+                {!property.aiAnalysis && (!property.imageUrls || property.imageUrls.length === 0) && (
+                    <div className="ai-analysis-placeholder">
+                        <p><i className="fas fa-info-circle"></i> Add property images to enable AI analysis</p>
+                    </div>
+                )}
+                {!property.aiAnalysis && property.imageUrls && property.imageUrls.length > 0 && !isAnalyzingAI && (
+                    <div className="ai-analysis-placeholder">
+                        <p><i className="fas fa-lightbulb"></i> Click "Analyze with AI" to get insights about potential issues, property condition, and recommendations based on the property images.</p>
+                    </div>
+                )}
+            </div>
+            {/* --- End AI Insights Section --- */}
 
             {/* --- Status History Section --- */}
             {property.statusHistory && property.statusHistory.length > 0 && (

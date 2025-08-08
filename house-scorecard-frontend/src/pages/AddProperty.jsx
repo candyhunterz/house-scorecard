@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../hooks/useConfirm';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmDialog from '../components/ConfirmDialog';
+import AIInsights from '../components/AIInsights';
 import './AddProperty.css'; // Make sure styles are imported
 
 function AddProperty() {
@@ -32,6 +33,9 @@ function AddProperty() {
   // State for Auto-Fill functionality
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFillStatus, setAutoFillStatus] = useState('');
+  
+  // State for AI analysis
+  const [aiAnalysisData, setAiAnalysisData] = useState(null);
 
   // --- Input Change Handlers ---
   // Simple handlers to update state based on input changes
@@ -104,7 +108,20 @@ function AddProperty() {
         setImageUrlsString(data.images.join('\n'));
       }
 
-      showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.`);
+      // Handle AI analysis if available
+      if (data.ai_analysis) {
+        setAiAnalysisData(data.ai_analysis);
+        const grade = data.ai_analysis.overall_grade || 'Unknown';
+        const redFlagsCount = data.ai_analysis.red_flags?.length || 0;
+        
+        if (redFlagsCount > 0) {
+          showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} with ${redFlagsCount} potential issues detected.`);
+        } else {
+          showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} - No major issues detected!`);
+        }
+      } else {
+        showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.`);
+      }
       
     } catch (error) {
       console.error('Auto-fill error:', error);
@@ -123,7 +140,7 @@ function AddProperty() {
   };
 
   // --- Form Submission Handler ---
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault(); // Prevent default browser form submission (page reload)
 
     // Basic validation (can be expanded)
@@ -150,12 +167,25 @@ function AddProperty() {
       // Pass the raw string - the context's addProperty function will parse it
       imageUrlsString: imageUrlsString,
       notes: notes.trim(), // Use trimmed notes
+      // Include AI analysis data if available
+      ...(aiAnalysisData && {
+        aiAnalysis: aiAnalysisData,
+        aiOverallGrade: aiAnalysisData.overall_grade,
+        aiRedFlags: aiAnalysisData.red_flags,
+        aiPositiveIndicators: aiAnalysisData.positive_indicators,
+        aiPriceAssessment: aiAnalysisData.price_assessment,
+        aiBuyerRecommendation: aiAnalysisData.buyer_recommendation,
+        aiConfidenceScore: aiAnalysisData.confidence_score,
+        aiAnalysisSummary: aiAnalysisData.analysis_summary,
+        aiAnalysisDate: new Date().toISOString()
+      }),
       // latitude: parseFloat(latitude) || null, // If adding lat/lon inputs
       // longitude: parseFloat(longitude) || null,
     };
+    
 
     try {
-        addProperty(newPropertyData); // Call context function to add the property
+        await addProperty(newPropertyData); // Call context function to add the property
         showSuccess('Property added successfully!'); // Provide user feedback
         navigate('/properties'); // Navigate back to the dashboard after successful add
     } catch (error) {
@@ -218,7 +248,7 @@ function AddProperty() {
         <div className="form-group">
           <label htmlFor="listingUrl">Listing URL</label>
           <div className="url-input-group">
-            <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.realtor.ca/..."/>
+            <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.realtor.ca/... or https://zealty.ca/..."/>
             <button 
               type="button" 
               className="btn btn-auto-fill" 
@@ -229,7 +259,7 @@ function AddProperty() {
             </button>
           </div>
           {isAutoFilling && <small className="auto-fill-status">{autoFillStatus}</small>}
-          {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
+          {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, Zealty.ca, HouseSigma.com, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
         </div>
 
         {/* Asking Price Input (Required, Number) */}
@@ -295,6 +325,23 @@ function AddProperty() {
             placeholder="e.g., Roof looks old, noisy street, great natural light..."
           />
         </div>
+
+        {/* AI Analysis Preview */}
+        {aiAnalysisData && (
+          <div className="ai-analysis-preview">
+            <h3>🤖 AI Analysis Preview</h3>
+            <AIInsights property={{
+              aiAnalysis: aiAnalysisData,
+              aiOverallGrade: aiAnalysisData.overall_grade,
+              aiRedFlags: aiAnalysisData.red_flags,
+              aiPositiveIndicators: aiAnalysisData.positive_indicators,
+              aiPriceAssessment: aiAnalysisData.price_assessment,
+              aiBuyerRecommendation: aiAnalysisData.buyer_recommendation,
+              aiConfidenceScore: aiAnalysisData.confidence_score,
+              aiAnalysisSummary: aiAnalysisData.analysis_summary
+            }} />
+          </div>
+        )}
 
         {/* Action Buttons (Submit and Cancel) */}
         <div className="form-actions">

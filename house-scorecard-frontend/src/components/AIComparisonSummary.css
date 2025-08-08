@@ -1,0 +1,431 @@
+/* src/components/AIComparisonSummary.css */
+
+.ai-comparison-summary {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  margin: 24px 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Collapsible Header */
+.ai-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.ai-summary-header:hover {
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.ai-summary-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.collapse-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #6c757d;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.collapse-button:hover {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+  transform: scale(1.1);
+}
+
+.collapse-button i {
+  transition: transform 0.2s ease;
+}
+
+/* Content Area */
+.ai-summary-content {
+  padding: 0 24px 24px 24px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* No AI Data State */
+.no-ai-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.no-ai-data p {
+  margin: 8px 0;
+  font-size: 1rem;
+}
+
+/* Winner Section */
+.winner-section {
+  margin-bottom: 32px;
+}
+
+.winner-badge {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  border: 2px solid #f39c12;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 6px 12px rgba(243, 156, 18, 0.2);
+}
+
+.winner-icon {
+  font-size: 2.5rem;
+  margin-right: 16px;
+}
+
+.winner-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.winner-property {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.winner-property strong {
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.winner-reason {
+  margin: 0;
+  color: #5d4037;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+/* Grades Comparison */
+.grades-comparison {
+  margin-bottom: 32px;
+}
+
+.grades-comparison h3 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.grades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.grade-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grade-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.property-name {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+}
+
+.grade-display {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: inline-block;
+  min-width: 60px;
+}
+
+/* Grade Badge Colors */
+.grade-badge, .grade-display {
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.grade-a {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+.grade-b {
+  background: linear-gradient(135deg, #3498db, #5dade2);
+}
+
+.grade-c {
+  background: linear-gradient(135deg, #f39c12, #f5b041);
+}
+
+.grade-d {
+  background: linear-gradient(135deg, #e67e22, #f0932b);
+}
+
+.grade-f {
+  background: linear-gradient(135deg, #e74c3c, #ec7063);
+}
+
+.grade-unknown {
+  background: linear-gradient(135deg, #95a5a6, #bdc3c7);
+}
+
+.grade-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.confidence-score {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.red-flags-count {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Risk Assessment */
+.risk-assessment {
+  margin-bottom: 32px;
+}
+
+.risk-assessment h3 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.risk-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.risk-card {
+  background: white;
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.lowest-risk {
+  border-color: #27ae60;
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.05), rgba(46, 204, 113, 0.05));
+}
+
+.highest-risk {
+  border-color: #e74c3c;
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.05), rgba(236, 112, 99, 0.05));
+}
+
+.risk-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.risk-icon {
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.risk-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.lowest-risk .risk-title {
+  color: #27ae60;
+}
+
+.highest-risk .risk-title {
+  color: #e74c3c;
+}
+
+.risk-property {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.risk-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.risk-number {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.risk-label {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.risk-breakdown {
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.risk-breakdown.high {
+  background: rgba(231, 76, 60, 0.1);
+  color: #c0392b;
+}
+
+/* Quick Insights */
+.quick-insights h3 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.insight-icon {
+  font-size: 1.1rem;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.insight-text {
+  color: #2c3e50;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .ai-comparison-summary {
+    margin: 16px 0;
+  }
+
+  .ai-summary-header {
+    padding: 16px 20px;
+  }
+
+  .ai-summary-content {
+    padding: 0 20px 20px 20px;
+  }
+
+  .winner-badge {
+    flex-direction: column;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .winner-icon {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+
+  .winner-property {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .grades-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .risk-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grade-display {
+    font-size: 1.5rem;
+  }
+
+  .risk-number {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-summary-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .grade-card {
+    padding: 12px;
+  }
+
+  .risk-card {
+    padding: 16px;
+  }
+}

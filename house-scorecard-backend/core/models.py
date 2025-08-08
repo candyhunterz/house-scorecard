@@ -29,6 +29,17 @@ class Property(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, blank=True, null=True, help_text="Current status in the house hunting pipeline")
     status_history = models.JSONField(default=list, blank=True, help_text="History of status changes with timestamps")
     
+    # AI Analysis fields
+    ai_analysis = models.JSONField(default=dict, blank=True, help_text="Complete AI analysis results")
+    ai_overall_grade = models.CharField(max_length=1, blank=True, null=True, help_text="AI overall grade (A-F)")
+    ai_red_flags = models.JSONField(default=list, blank=True, help_text="AI detected red flags")
+    ai_positive_indicators = models.JSONField(default=list, blank=True, help_text="AI detected positive indicators")
+    ai_price_assessment = models.CharField(max_length=10, blank=True, null=True, help_text="AI price assessment (fair/high/low)")
+    ai_buyer_recommendation = models.CharField(max_length=50, blank=True, null=True, help_text="AI buyer recommendation")
+    ai_confidence_score = models.FloatField(blank=True, null=True, help_text="AI analysis confidence (0-1)")
+    ai_analysis_summary = models.TextField(blank=True, help_text="AI analysis summary")
+    ai_analysis_date = models.DateTimeField(blank=True, null=True, help_text="When AI analysis was performed")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -83,6 +94,13 @@ class Property(models.Model):
             final_score = (weighted_score_sum / (total_weight * 10)) * 100
             self.score = int(round(final_score))
 
+    def needs_ai_analysis(self):
+        """Check if property needs AI analysis"""
+        return (
+            not self.ai_analysis_date or
+            (self.image_urls and len(self.image_urls) > 0 and not self.ai_analysis)
+        )
+    
     def save(self, *args, **kwargs):
         """Override save to calculate score automatically."""
         # Score is now calculated when a Rating is saved, not when a Property is saved.

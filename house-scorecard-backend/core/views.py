@@ -16,8 +16,11 @@ import logging
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from django.core.cache import cache
+from django.utils import timezone
 from .models import Property, Criterion, Rating
-from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer, UserSerializer
+from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer
+from .health import get_health_status
+from .services.gemini_analyzer import get_ai_analyzer
 
 # Geocoding service using OpenStreetMap Nominatim API
 def geocode_address(address):
@@ -67,6 +70,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
         """Set the owner to the current user when creating a property and geocode if needed."""
         # Get the property data before saving
         property_data = serializer.validated_data
+        logger.info(f"Property creation - validated_data: {property_data}")
+        logger.info(f"Property creation - request.data: {self.request.data}")
         
         # Try to geocode if no coordinates provided
         if not property_data.get('latitude') or not property_data.get('longitude'):
@@ -81,7 +86,39 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 else:
                     logger.warning(f"Failed to geocode address: {address}")
         
-        serializer.save(owner=self.request.user, **property_data)
+        # Save the property first
+        property_instance = serializer.save(owner=self.request.user, **property_data)
+        
+        # If no AI analysis provided but property has images, trigger analysis
+        # Check both the property instance and if AI data was provided in the request
+        ai_data_provided = bool(
+            property_instance.ai_analysis or 
+            property_instance.ai_analysis_date or
+            property_instance.ai_overall_grade
+        )
+        
+        should_run_ai_analysis = (
+            property_instance.needs_ai_analysis() and 
+            not ai_data_provided
+        )
+        
+        logger.info(f"Should run AI analysis: {should_run_ai_analysis}, ai_analysis: {property_instance.ai_analysis}, ai_analysis_date: {property_instance.ai_analysis_date}")
+        
+        if should_run_ai_analysis:
+            try:
+                from .tasks import analyze_property_with_ai_async
+                logger.info(f"Queuing AI analysis for new property {property_instance.id}")
+                
+                # Queue AI analysis as background task
+                task = analyze_property_with_ai_async.delay(property_instance.id)
+                logger.info(f"AI analysis queued for property {property_instance.id}, task_id: {task.id}")
+                
+                # Optionally store task ID for tracking
+                # You could add a task_id field to track the background task
+                
+            except Exception as e:
+                logger.error(f"Failed to queue AI analysis for new property: {e}")
+                # Don't fail property creation if AI queueing fails
 
     @action(detail=False, methods=['post'])
     def geocode_properties(self, request):
@@ -394,6 +431,76 @@ class PropertyViewSet(viewsets.ModelViewSet):
         except (ValueError, InvalidOperation, TypeError):
             return None
 
+    def _extract_description(self, soup):
+        """Extract property description from various selectors."""
+        description_selectors = [
+            # Realtor.ca specific
+            '.listingDetailDescription',
+            '.listingDescription',
+            '.property-description',
+            # Generic selectors
+            '.description',
+            '.listing-description', 
+            '.property-details',
+            '.remarks',
+            '.public-remarks',
+            '.mls-remarks',
+            '[data-testid="listing-description"]',
+            '[class*="description"]',
+            # Meta description fallback
+            'meta[name="description"]',
+        ]
+        
+        for selector in description_selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    description = element.get('content', '').strip()
+                else:
+                    description = element.get_text(strip=True)
+                
+                # Clean and validate description
+                if description and len(description) > 20:  # Must be meaningful length
+                    # Clean up extra whitespace and formatting
+                    cleaned_description = ' '.join(description.split())
+                    
+                    # Remove common junk patterns
+                    junk_patterns = [
+                        r'^\s*Description\s*:?\s*',  # "Description:" prefix
+                        r'^\s*Remarks\s*:?\s*',     # "Remarks:" prefix
+                        r'\s*Click here.*$',         # Footer links
+                        r'\s*For more.*$',           # Footer text
+                        r'\s*Contact.*$',            # Contact info
+                    ]
+                    
+                    for pattern in junk_patterns:
+                        cleaned_description = re.sub(pattern, '', cleaned_description, flags=re.IGNORECASE)
+                    
+                    if len(cleaned_description) > 20:  # Still meaningful after cleaning
+                        logger.info(f"Extracted description ({len(cleaned_description)} chars)")
+                        return cleaned_description
+        
+        # Fallback: try to extract from page text with keywords
+        page_text = soup.get_text()
+        
+        # Look for description sections in page text
+        description_patterns = [
+            r'(?i)description[:\s]*(.{50,500}?)(?:\n\n|\n[A-Z]|\s{3,})',
+            r'(?i)remarks[:\s]*(.{50,500}?)(?:\n\n|\n[A-Z]|\s{3,})',
+            r'(?i)details[:\s]*(.{50,500}?)(?:\n\n|\n[A-Z]|\s{3,})',
+        ]
+        
+        for pattern in description_patterns:
+            match = re.search(pattern, page_text)
+            if match:
+                description = match.group(1).strip()
+                cleaned_description = ' '.join(description.split())
+                if len(cleaned_description) > 50:
+                    logger.info(f"Extracted description from page text ({len(cleaned_description)} chars)")
+                    return cleaned_description
+        
+        return None
+
     @action(detail=False, methods=['post'])
     def scrape_listing(self, request):
         """
@@ -425,7 +532,14 @@ class PropertyViewSet(viewsets.ModelViewSet):
             last_scrape = cache.get(rate_limit_key)
             if last_scrape:
                 # Enforce minimum interval between requests
-                min_interval = 60 if 'realtor.ca' in domain else 30  # 60s for Realtor.ca, 30s for others
+                if 'realtor.ca' in domain:
+                    min_interval = 60  # 60s for Realtor.ca
+                elif 'housesigma.com' in domain:
+                    min_interval = 30  # 30s for HouseSigma (though scraping won't work)
+                elif 'zealty.ca' in domain:
+                    min_interval = 20  # 20s for Zealty.ca (lighter rate limiting)
+                else:
+                    min_interval = 30  # 30s for other sites
                 time_since_last = time.time() - last_scrape
                 if time_since_last < min_interval:
                     wait_time = int(min_interval - time_since_last)
@@ -523,6 +637,21 @@ class PropertyViewSet(viewsets.ModelViewSet):
         
         # Detect if this is Realtor.ca for special handling
         is_realtor_ca = 'realtor.ca' in url.lower()
+        
+        # Detect if this is HouseSigma.com for special handling
+        is_housesigma = 'housesigma.com' in url.lower()
+        
+        # Detect if this is Zealty.ca for special handling
+        is_zealty = 'zealty.ca' in url.lower()
+        
+        # Handle HouseSigma.com specifically
+        if is_housesigma:
+            # HouseSigma is a JavaScript SPA that can't be scraped with traditional methods
+            raise Exception(f'HouseSigma.com uses JavaScript rendering and cannot be scraped automatically.\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs\n\nNote: HouseSigma requires a browser to load the property data.')
+        
+        # Handle Zealty.ca specifically - extract from JavaScript gData variable
+        if is_zealty:
+            return self._scrape_zealty(url, session or requests.Session())
         
         for attempt in range(max_attempts):
             try:
@@ -640,11 +769,196 @@ class PropertyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"Error extracting sqft: {e}")
             scraped_data['sqft'] = None
+            
+        try:
+            scraped_data['description'] = self._extract_description(soup)
+        except Exception as e:
+            print(f"Error extracting description: {e}")
+            scraped_data['description'] = None
         
         # Remove None values
         scraped_data = {k: v for k, v in scraped_data.items() if v is not None}
         
+        # Add AI analysis if images are available
+        if scraped_data.get('images'):
+            try:
+                logger.info("Starting AI analysis of scraped property data")
+                analyzer = get_ai_analyzer()
+                
+                # Prepare data for AI analysis
+                ai_input_data = {
+                    'address': scraped_data.get('address', 'Unknown address'),
+                    'price': scraped_data.get('price'),
+                    'beds': scraped_data.get('beds'),
+                    'baths': scraped_data.get('baths'),
+                    'sqft': scraped_data.get('sqft'),
+                    'imageUrls': scraped_data.get('images', []),
+                    'description': scraped_data.get('description', 'No description extracted from listing')
+                }
+                
+                # Perform AI analysis
+                ai_analysis = analyzer.analyze_property_comprehensive(ai_input_data)
+                
+                # Add AI analysis to scraped data
+                scraped_data['ai_analysis'] = ai_analysis
+                
+                logger.info(f"AI analysis completed with grade: {ai_analysis.get('overall_grade', 'Unknown')}")
+                
+            except Exception as e:
+                logger.error(f"AI analysis failed during scraping: {e}")
+                # Don't fail the scraping if AI analysis fails
+                scraped_data['ai_analysis'] = {
+                    'error': f"AI analysis failed: {str(e)}",
+                    'analysis_summary': 'AI analysis could not be completed'
+                }
+        else:
+            logger.info("No images available for AI analysis")
+        
         return scraped_data
+
+    def _scrape_zealty(self, url, session):
+        """Special scraping method for Zealty.ca listings that extract data from JavaScript variables."""
+        import re
+        from bs4 import BeautifulSoup
+        
+        try:
+            logger.info(f"Scraping Zealty.ca listing: {url}")
+            
+            # Configure session with realistic headers
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
+            session.headers.update(headers)
+            response = session.get(url, timeout=15, allow_redirects=True)
+            response.raise_for_status()
+            
+            logger.info(f"Successfully fetched Zealty.ca page, content length: {len(response.content)} bytes")
+            
+            content = response.text
+            
+            # Extract gData variable which contains tab-delimited property data
+            gdata_pattern = r'var gData = "([^"]+)"'
+            gdata_match = re.search(gdata_pattern, content)
+            
+            if not gdata_match:
+                raise Exception("Could not find property data in Zealty.ca listing. The page structure may have changed.")
+            
+            gdata = gdata_match.group(1)
+            fields = gdata.split('\t')
+            
+            if len(fields) < 15:
+                raise Exception("Zealty.ca property data format appears to have changed.")
+            
+            logger.info(f"Successfully extracted Zealty.ca data with {len(fields)} fields")
+            
+            # Extract data from known field positions
+            scraped_data = {}
+            
+            # Address (Field 5) - combine with building name if available
+            address = fields[5] if len(fields) > 5 else None
+            building = fields[4] if len(fields) > 4 and fields[4] else None
+            if address:
+                # Add city from field 36 if available
+                city = fields[36] if len(fields) > 36 and fields[36] else None
+                if city:
+                    full_address = f"{address}, {city}"
+                else:
+                    full_address = address
+                scraped_data['address'] = full_address
+                logger.info(f"Extracted address: {full_address}")
+            
+            # Price (Field 7) - multiply by 1000 since it's in thousands
+            price_str = fields[7] if len(fields) > 7 else None
+            if price_str:
+                try:
+                    price = float(price_str) * 1000  # Convert from thousands to actual price
+                    scraped_data['price'] = int(price)
+                    logger.info(f"Extracted price: ${int(price):,}")
+                except ValueError:
+                    pass
+            
+            # Bedrooms (Field 12)
+            beds_str = fields[12] if len(fields) > 12 else None
+            if beds_str and beds_str.isdigit():
+                scraped_data['beds'] = int(beds_str)
+                logger.info(f"Extracted bedrooms: {beds_str}")
+            
+            # Bathrooms (Field 13) 
+            baths_str = fields[13] if len(fields) > 13 else None
+            if baths_str and baths_str.replace('.', '').isdigit():
+                scraped_data['baths'] = float(baths_str)
+                logger.info(f"Extracted bathrooms: {baths_str}")
+            
+            # Square footage (Field 14)
+            sqft_str = fields[14] if len(fields) > 14 else None
+            if sqft_str and sqft_str.isdigit():
+                scraped_data['sqft'] = int(sqft_str)
+                logger.info(f"Extracted square footage: {sqft_str}")
+            
+            # Description (Field 8) - the long description text
+            description_str = fields[8] if len(fields) > 8 else None
+            if description_str and len(description_str.strip()) > 20:
+                # Clean up the description text
+                cleaned_description = ' '.join(description_str.split())
+                scraped_data['description'] = cleaned_description
+                logger.info(f"Extracted description: {len(cleaned_description)} characters")
+            
+            # Images (Field 138) - pipe-delimited URLs
+            if len(fields) > 138 and fields[138]:
+                image_urls = [url.strip() for url in fields[138].split('|') if url.strip()]
+                if image_urls:
+                    scraped_data['images'] = image_urls
+                    logger.info(f"Extracted {len(image_urls)} images")
+            
+            # Add AI analysis if images are available
+            if scraped_data.get('images'):
+                try:
+                    logger.info("Starting AI analysis of scraped Zealty.ca property data")
+                    analyzer = get_ai_analyzer()
+                    
+                    # Prepare data for AI analysis
+                    ai_input_data = {
+                        'address': scraped_data.get('address', 'Unknown address'),
+                        'price': scraped_data.get('price'),
+                        'beds': scraped_data.get('beds'),
+                        'baths': scraped_data.get('baths'),
+                        'sqft': scraped_data.get('sqft'),
+                        'imageUrls': scraped_data.get('images', []),
+                        'description': scraped_data.get('description', 'No description available')
+                    }
+                    
+                    # Run AI analysis with batching support for all images
+                    ai_result = analyzer.analyze_property_comprehensive(ai_input_data)
+                    
+                    if ai_result and not ai_result.get('error'):
+                        logger.info("AI analysis completed successfully for Zealty.ca listing")
+                        # Add AI analysis fields to scraped_data
+                        scraped_data['ai_analysis'] = ai_result
+                    else:
+                        logger.warning(f"AI analysis failed: {ai_result.get('error', 'Unknown error') if ai_result else 'No result returned'}")
+                        
+                except Exception as e:
+                    logger.error(f"AI analysis error: {str(e)}")
+                    # Continue without AI analysis
+                    scraped_data.update({
+                        'error': f"AI analysis failed: {str(e)}",
+                        'analysis_summary': 'AI analysis could not be completed'
+                    })
+            else:
+                logger.info("No images available for AI analysis")
+            
+            logger.info(f"Zealty.ca scraping completed successfully with {len(scraped_data)} data fields")
+            return scraped_data
+            
+        except Exception as e:
+            logger.error(f"Zealty.ca scraping failed: {str(e)}")
+            raise Exception(f'Failed to extract data from Zealty.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
 
     def _extract_images(self, soup, base_url):
         """Extract property images from various selectors."""
@@ -659,9 +973,13 @@ class PropertyViewSet(viewsets.ModelViewSet):
             meta_images = self._extract_redfin_images_from_meta(soup)
             if meta_images:
                 image_urls.extend(meta_images)
-                # For Redfin, if we got meta images, return early to avoid UI elements
-                logger.info(f"Found {len(meta_images)} Redfin meta images, skipping generic selectors")
-                return meta_images[:20] if meta_images else None
+                logger.info(f"Found {len(meta_images)} Redfin meta images")
+                # If we have a good number of meta images, return them
+                if len(meta_images) >= 10:
+                    logger.info(f"Got {len(meta_images)} meta images, sufficient for analysis")
+                    return meta_images[:50] if meta_images else None
+                else:
+                    logger.info(f"Only got {len(meta_images)} meta images, will try additional methods")
         
         # Common selectors for property images
         selectors = [
@@ -705,26 +1023,28 @@ class PropertyViewSet(viewsets.ModelViewSet):
                                 image_urls.append(full_url)
         
         logger.info(f"Total images found: {len(image_urls)}")
-        # Limit to reasonable number of images
-        return image_urls[:20] if image_urls else None
+        # Return up to 50 images for comprehensive analysis
+        return image_urls[:50] if image_urls else None
 
     def _extract_redfin_images_from_meta(self, soup):
         """Extract Redfin images from meta tags - more reliable method."""
         image_urls = []
         
-        # Redfin stores image URLs in twitter meta tags
-        meta_selectors = [
-            'meta[name="twitter:image:photo0"]',
-            'meta[name="twitter:image:photo1"]',
-            'meta[name="twitter:image:photo2"]',
-            'meta[name="twitter:image:photo3"]',
-            'meta[name="twitter:image:photo4"]',
-            'meta[name="twitter:image:photo5"]',
-            'meta[name="twitter:image:photo6"]',
-            'meta[name="twitter:image:photo7"]',
-            'meta[name="twitter:image:photo8"]',
-            'meta[name="twitter:image:photo9"]',
-        ]
+        # Redfin stores image URLs in twitter meta tags - check more thoroughly
+        meta_selectors = []
+        # Generate selectors for up to 50 images (some listings have 30+ images)
+        for i in range(50):
+            meta_selectors.append(f'meta[name="twitter:image:photo{i}"]')
+        
+        # Also check for other possible meta tag formats
+        meta_selectors.extend([
+            'meta[property="twitter:image:photo0"]',
+            'meta[property="twitter:image:photo1"]',
+            'meta[property="twitter:image:photo2"]',
+            'meta[property="twitter:image:photo3"]',
+            'meta[property="twitter:image:photo4"]',
+            'meta[property="og:image"]'
+        ])
         
         for selector in meta_selectors:
             meta_tag = soup.select_one(selector)
@@ -1061,6 +1381,77 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Check for image extensions or image-related paths
         image_indicators = ['.jpg', '.jpeg', '.png', '.webp', '/photo/', '/image/', '/pic/']
         return any(indicator in url.lower() for indicator in image_indicators)
+    
+    @action(detail=True, methods=['post'])
+    def analyze_with_ai(self, request, pk=None):
+        """
+        Manually trigger AI analysis for a specific property
+        """
+        try:
+            property_instance = self.get_object()
+            
+            # Check if property has images
+            if not property_instance.image_urls or len(property_instance.image_urls) == 0:
+                return Response(
+                    {'error': 'Property must have images for AI analysis'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            logger.info(f"Manual AI analysis triggered for property {property_instance.id}")
+            
+            # Get AI analyzer
+            analyzer = get_ai_analyzer()
+            
+            # Prepare data for AI analysis
+            ai_input_data = {
+                'address': property_instance.address,
+                'price': float(property_instance.price) if property_instance.price else None,
+                'imageUrls': property_instance.image_urls,
+                'description': property_instance.notes or '',
+                'beds': property_instance.beds,
+                'baths': property_instance.baths,
+                'sqft': property_instance.sqft
+            }
+            
+            # Run AI analysis
+            ai_analysis = analyzer.analyze_property_comprehensive(ai_input_data)
+            
+            if ai_analysis and not ai_analysis.get('error'):
+                # Save AI analysis to property
+                property_instance.ai_analysis = ai_analysis
+                property_instance.ai_overall_grade = ai_analysis.get('overall_grade')
+                property_instance.ai_red_flags = ai_analysis.get('red_flags', [])
+                property_instance.ai_positive_indicators = ai_analysis.get('positive_indicators', [])
+                property_instance.ai_price_assessment = ai_analysis.get('price_assessment')
+                property_instance.ai_buyer_recommendation = ai_analysis.get('buyer_recommendation')
+                property_instance.ai_confidence_score = ai_analysis.get('confidence_score')
+                property_instance.ai_analysis_summary = ai_analysis.get('analysis_summary')
+                property_instance.ai_analysis_date = timezone.now()
+                
+                property_instance.save()
+                
+                logger.info(f"Manual AI analysis completed and saved for property {property_instance.id}")
+                
+                # Return updated property data
+                serializer = self.get_serializer(property_instance)
+                return Response({
+                    'success': True,
+                    'message': 'AI analysis completed successfully',
+                    'property': serializer.data
+                })
+            else:
+                logger.error(f"AI analysis failed for property {property_instance.id}")
+                return Response(
+                    {'error': 'AI analysis failed or returned empty results'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+                
+        except Exception as e:
+            logger.error(f"Manual AI analysis failed for property {pk}: {e}")
+            return Response(
+                {'error': f'AI analysis failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class CriterionViewSet(viewsets.ModelViewSet):
     """API endpoint for criteria."""
@@ -1083,3 +1474,33 @@ class RatingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return only ratings for properties owned by the current user."""
         return Rating.objects.filter(property__owner=self.request.user)
+
+
+# Health Check Views
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+
+class HealthCheckView(APIView):
+    """
+    Health check endpoint for monitoring system status
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        """Return system health status"""
+        try:
+            health_data = get_health_status()
+            status_code = status.HTTP_200_OK
+            
+            if health_data['status'] == 'unhealthy':
+                status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            elif health_data['status'] == 'degraded':
+                status_code = status.HTTP_200_OK  # Still operational
+                
+            return Response(health_data, status=status_code)
+        except Exception as e:
+            return Response({
+                'status': 'unhealthy',
+                'error': str(e),
+                'timestamp': __import__('datetime').datetime.now().isoformat()
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
