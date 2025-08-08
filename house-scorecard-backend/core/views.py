@@ -8,6 +8,7 @@ import io
 import re
 import json
 import requests
+from curl_cffi import requests as cf_requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import time
@@ -25,8 +26,8 @@ from .services.gemini_analyzer import get_ai_analyzer
 # Geocoding service using OpenStreetMap Nominatim API
 def geocode_address(address):
     try:
-        import requests
-        response = requests.get(
+        # Use curl_cffi for geocoding as well to maintain consistency
+        response = cf_requests.get(
             f'https://nominatim.openstreetmap.org/search',
             params={
                 'format': 'json',
@@ -34,7 +35,9 @@ def geocode_address(address):
                 'limit': 1,
                 'countrycodes': 'ca,us'
             },
-            timeout=10
+            timeout=10,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
+            impersonate="chrome120"
         )
         data = response.json()
         
@@ -578,20 +581,20 @@ class PropertyViewSet(viewsets.ModelViewSet):
         Scrape property data from various real estate websites with advanced anti-bot protection workarounds.
         """
         # Extended list of realistic user agents with more recent versions
+        # Note: curl_cffi handles User-Agent automatically based on impersonation, but we keep these for header variation
         user_agents = [
             # Chrome on Windows (most common)
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
             # Chrome on Mac
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             # Firefox
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0',
             # Safari
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
             # Edge
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
         ]
         
         # More sophisticated header variations
@@ -662,24 +665,29 @@ class PropertyViewSet(viewsets.ModelViewSet):
         
         # Handle Zealty.ca specifically - extract from JavaScript gData variable
         if is_zealty:
-            return self._scrape_zealty(url, session or requests.Session())
+            return self._scrape_zealty(url, session or cf_requests.Session(impersonate="chrome120"))
         
         for attempt in range(max_attempts):
             try:
                 logger.info(f"Scraping attempt {attempt + 1}/{max_attempts} for URL: {url}")
+                logger.info("Using curl_cffi with Chrome120 impersonation to bypass anti-bot protection")
                 
-                # Use new session for each attempt to avoid session fingerprinting
-                session = requests.Session()
+                # Use curl_cffi session with browser impersonation to bypass anti-bot protection
+                # Try different browser fingerprints for better success rate
+                browser_types = ["chrome120", "chrome110", "safari15_5", "edge99"]
+                selected_browser = random.choice(browser_types)
+                logger.info(f"Using browser impersonation: {selected_browser}")
+                session = cf_requests.Session(impersonate=selected_browser)
                 
-                # Configure session with more realistic settings
-                session.max_redirects = 5
-                adapter = requests.adapters.HTTPAdapter(
-                    pool_connections=1,
-                    pool_maxsize=1,
-                    max_retries=0
-                )
-                session.mount('http://', adapter)
-                session.mount('https://', adapter)
+                # Add cookie persistence and session management
+                session.cookies.clear()  # Start fresh
+                
+                # Enable automatic cookie handling and redirect following
+                session.verify = True  # Enable SSL verification
+                session.allow_redirects = True
+                
+                # Configure session with more realistic settings (curl_cffi style)
+                # Note: curl_cffi doesn't use HTTPAdapter, it handles TLS/HTTP2 automatically
                 
                 # Rotate user agent and headers for each attempt
                 selected_user_agent = random.choice(user_agents)
@@ -689,14 +697,71 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 # No pre-browsing simulation - go straight to target for speed
                 # Users don't want to wait for multiple page visits
                 
-                # Make the actual request directly
+                # Two-step approach for better success: first visit main site, then specific listing
+                if is_realtor_ca:
+                    try:
+                        # Step 1: Visit main realtor.ca page to establish session and get cookies
+                        logger.info("Step 1: Visiting realtor.ca homepage to establish session")
+                        home_headers = {
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                            'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+                            'Accept-Encoding': 'gzip, deflate, br',
+                            'Cache-Control': 'max-age=0',
+                            'Upgrade-Insecure-Requests': '1',
+                            'Sec-Fetch-Dest': 'document',
+                            'Sec-Fetch-Mode': 'navigate',
+                            'Sec-Fetch-Site': 'none',
+                            'Sec-Fetch-User': '?1'
+                        }
+                        
+                        # Visit homepage first with minimal delay
+                        home_response = session.get('https://www.realtor.ca/', headers=home_headers, timeout=15)
+                        logger.info(f"Homepage visit: {home_response.status_code}, cookies: {len(session.cookies)}")
+                        
+                        # Small delay between requests
+                        time.sleep(random.uniform(1.0, 2.0))
+                        
+                    except Exception as e:
+                        logger.warning(f"Homepage visit failed: {e}, proceeding with direct request")
+
+                # Make the actual request to target URL
                 target_url = url
                 
-                session.headers.update(selected_headers)
-                response = session.get(target_url, timeout=15, allow_redirects=True)  # Reduced timeout
+                # Add longer delay to appear more human-like and avoid rate limiting
+                delay = random.uniform(3.0, 6.0)  # Even longer delay for Incapsula bypass
+                logger.info(f"Adding {delay:.1f} second delay to avoid rate limiting")
+                time.sleep(delay)
+                
+                # Update headers for the actual listing request
+                listing_headers = selected_headers.copy()
+                if is_realtor_ca:
+                    # Add proper referrer for listing pages
+                    listing_headers['Referer'] = 'https://www.realtor.ca/'
+                    listing_headers['Sec-Fetch-Site'] = 'same-origin'
+                    listing_headers['Sec-Fetch-Mode'] = 'navigate'
+                    listing_headers['Sec-Fetch-Dest'] = 'document'
+                
+                session.headers.update(listing_headers)
+                response = session.get(target_url, timeout=20, allow_redirects=True)  # Increased timeout
                 response.raise_for_status()
                 
                 logger.info(f"Successfully fetched page, status: {response.status_code}, content length: {len(response.content)} bytes")
+                
+                # Check for JavaScript challenge pages and common blocks
+                content_lower = response.text.lower()
+                if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check', 'please wait', 'checking your browser']):
+                    # Try to handle simple JavaScript challenges
+                    if 'please wait' in content_lower and len(response.text) < 2000:
+                        logger.info("Detected JavaScript challenge, waiting and retrying...")
+                        time.sleep(5)  # Wait for JS challenge timeout
+                        
+                        # Retry the request with challenge cookies
+                        retry_response = session.get(target_url, timeout=20, allow_redirects=True)
+                        if retry_response.status_code == 200 and len(retry_response.text) > 2000:
+                            logger.info("Successfully passed JavaScript challenge")
+                            response = retry_response
+                        else:
+                            logger.warning("JavaScript challenge retry failed")
                 
                 break  # Success, exit retry loop
                 
