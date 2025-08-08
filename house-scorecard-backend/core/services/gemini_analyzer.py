@@ -67,7 +67,7 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             max_images_per_batch = getattr(settings, 'AI_MAX_IMAGES_PER_ANALYSIS', 3)
             
             # Limit total images processed to prevent memory issues
-            if len(image_urls) > 10:
+            if len(image_urls) > 15:
                 logger.warning(f"Too many images ({len(image_urls)}), limiting to first 10")
                 image_urls = image_urls[:10]
             
