@@ -18,7 +18,7 @@ from datetime import datetime
 from django.core.cache import cache
 from django.utils import timezone
 from .models import Property, Criterion, Rating
-from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer
+from .serializers import PropertySerializer, CriterionSerializer, RatingSerializer, UserSerializer
 from .health import get_health_status
 from .services.gemini_analyzer import get_ai_analyzer
 
