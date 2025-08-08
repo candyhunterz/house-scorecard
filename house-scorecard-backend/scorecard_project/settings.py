@@ -177,14 +177,30 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    'https://house-scorecard.vercel.app', # Replace with your Vercel URL
+    'https://house-scorecard.vercel.app',
 ]
+
+# Allow additional headers for authentication
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Allow credentials
+CORS_ALLOW_CREDENTIALS = True
 
 # AI Analysis settings
 AI_PROVIDER = os.environ.get('AI_PROVIDER', 'gemini')  # Default to Gemini
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')  # Required for Gemini
-GEMINI_MODEL_NAME = os.environ.get('GEMINI_MODEL_NAME', 'gemini-2.0-flash-exp')  # Updated to match analyzer
-AI_MAX_IMAGES_PER_ANALYSIS = int(os.environ.get('AI_MAX_IMAGES_PER_ANALYSIS', '6'))  # Limit images for cost control
+GEMINI_MODEL_NAME = os.environ.get('GEMINI_MODEL_NAME', 'gemini-1.5-flash')  # Use lighter model for production
+AI_MAX_IMAGES_PER_ANALYSIS = int(os.environ.get('AI_MAX_IMAGES_PER_ANALYSIS', '3'))  # Reduce to 3 images for memory efficiency
 
 # Gemini Thinking Configuration
 # -1 = Dynamic thinking (model decides), 0 = No thinking, >0 = Fixed budget

@@ -45,8 +45,8 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # Resize if too large (Gemini has size limits)
-            max_size = 1024
+            # Resize if too large (Gemini has size limits) - use smaller size for memory efficiency
+            max_size = 512  # Reduced from 1024 to save memory
             if image.width > max_size or image.height > max_size:
                 image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
             
