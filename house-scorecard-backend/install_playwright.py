@@ -9,12 +9,16 @@ import sys
 def install_playwright_browsers():
     """Install Playwright browsers if not already installed"""
     try:
-        # Set browser path for Render
-        os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
+        # Set browser path for Render - use project directory
+        browser_path = '/opt/render/project/src/browsers'
+        os.environ['PLAYWRIGHT_BROWSERS_PATH'] = browser_path
         
-        print("Installing Playwright browsers...")
+        # Create browsers directory if it doesn't exist
+        os.makedirs(browser_path, exist_ok=True)
+        
+        print(f"Installing Playwright browsers to {browser_path}...")
         result = subprocess.run([
-            sys.executable, '-m', 'playwright', 'install', 'chromium'
+            sys.executable, '-m', 'playwright', 'install', '--with-deps', 'chromium'
         ], check=True, capture_output=True, text=True)
         
         print("Playwright browsers installed successfully!")
