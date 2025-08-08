@@ -53,28 +53,28 @@ def check_ai_configuration():
         'message': "Celery broker configured" if celery_broker else "CELERY_BROKER_URL not set - background tasks disabled"
     }
     
-    # Check Redis connection (if using Redis as broker)
-    if celery_broker and 'redis://' in celery_broker:
-        try:
-            import redis
-            import urllib.parse
-            
-            parsed_url = urllib.parse.urlparse(celery_broker)
-            r = redis.Redis(
-                host=parsed_url.hostname or 'localhost',
-                port=parsed_url.port or 6379,
-                db=int(parsed_url.path.lstrip('/')) if parsed_url.path else 0
-            )
-            r.ping()
-            checks['redis_connection'] = {
-                'status': 'ok',
-                'message': "Redis connection successful"
-            }
-        except Exception as e:
-            checks['redis_connection'] = {
-                'status': 'error',
-                'message': f"Redis connection failed: {str(e)}"
-            }
+    # Redis connection check disabled - using separated analysis approach instead of background tasks
+    # if celery_broker and 'redis://' in celery_broker:
+    #     try:
+    #         import redis
+    #         import urllib.parse
+    #         
+    #         parsed_url = urllib.parse.urlparse(celery_broker)
+    #         r = redis.Redis(
+    #             host=parsed_url.hostname or 'localhost',
+    #             port=parsed_url.port or 6379,
+    #             db=int(parsed_url.path.lstrip('/')) if parsed_url.path else 0
+    #         )
+    #         r.ping()
+    #         checks['redis_connection'] = {
+    #             'status': 'ok',
+    #             'message': "Redis connection successful"
+    #         }
+    #     except Exception as e:
+    #         checks['redis_connection'] = {
+    #             'status': 'error',
+    #             'message': f"Redis connection failed: {str(e)}"
+    #         }
     
     # Check required environment variables
     required_vars = ['SECRET_KEY']

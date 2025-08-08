@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'whitenoise.runserver_nostatic',
-    'django_celery_results',
+    # 'django_celery_results',  # Disabled - using separated analysis instead
     # Your apps
     'core',
 ]
@@ -232,12 +232,13 @@ if AI_PROVIDER == 'gemini' and not GEMINI_API_KEY:
 if AI_MAX_IMAGES_PER_ANALYSIS < 1 or AI_MAX_IMAGES_PER_ANALYSIS > 20:
     raise ValueError("AI_MAX_IMAGES_PER_ANALYSIS must be between 1 and 20")
 
-# Celery Configuration for background AI processing
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+# Celery Configuration for background AI processing - DISABLED
+# Using separated scraping/analysis approach instead
+# CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+# CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
 # OpenAI settings (for future use)

@@ -554,6 +554,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
             # Scrape the listing
             scraped_data = self._scrape_property_listing(url)
             
+            # Add metadata about analysis readiness
+            scraped_data['analysis_ready'] = bool(scraped_data.get('images'))
+            scraped_data['image_count'] = len(scraped_data.get('images', []))
+            
+            # Add helpful message about next steps
+            if scraped_data.get('images'):
+                scraped_data['next_steps'] = f"Property data scraped successfully with {len(scraped_data['images'])} images. You can now run AI analysis."
+            else:
+                scraped_data['next_steps'] = "Property data scraped but no images found. AI analysis requires images."
+            
             return Response(scraped_data)
 
         except Exception as e:
@@ -780,10 +790,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Remove None values
         scraped_data = {k: v for k, v in scraped_data.items() if v is not None}
         
-        # Temporarily disable AI analysis during scraping to prevent memory issues
-        disable_ai_during_scraping = True  # Set to False to re-enable
+        # AI analysis is now handled separately via /analyze endpoint
+        # This keeps scraping fast and reliable
+        disable_ai_during_scraping = True
         
-        if scraped_data.get('images') and not disable_ai_during_scraping:
+        if False:  # Disabled - AI analysis moved to separate endpoint
             try:
                 logger.info("Starting AI analysis of scraped property data")
                 analyzer = get_ai_analyzer()
@@ -927,8 +938,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     scraped_data['images'] = optimized_images
                     logger.info(f"Extracted {len(raw_image_urls)} images, optimized {len(optimized_images)}")
             
-            # Add AI analysis if images are available
-            if scraped_data.get('images'):
+            # AI analysis is now handled separately via /analyze endpoint
+            if False:  # Disabled - moved to separate endpoint
                 try:
                     logger.info("Starting AI analysis of scraped Zealty.ca property data")
                     analyzer = get_ai_analyzer()
@@ -1472,7 +1483,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def analyze_with_ai(self, request, pk=None):
         """
-        Manually trigger AI analysis for a specific property
+        Run AI analysis for a specific property (separated from scraping for better reliability)
         """
         try:
             property_instance = self.get_object()
@@ -1484,7 +1495,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            logger.info(f"Manual AI analysis triggered for property {property_instance.id}")
+            logger.info(f"AI analysis triggered for property {property_instance.id} with {len(property_instance.image_urls)} images")
             
             # Get AI analyzer
             analyzer = get_ai_analyzer()
@@ -1500,7 +1511,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 'sqft': property_instance.sqft
             }
             
-            # Run AI analysis
+            # Run AI analysis with improved error handling
             ai_analysis = analyzer.analyze_property_comprehensive(ai_input_data)
             
             if ai_analysis and not ai_analysis.get('error'):
@@ -1517,24 +1528,105 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 
                 property_instance.save()
                 
-                logger.info(f"Manual AI analysis completed and saved for property {property_instance.id}")
+                logger.info(f"AI analysis completed and saved for property {property_instance.id} - Grade: {ai_analysis.get('overall_grade')}")
                 
                 # Return updated property data
                 serializer = self.get_serializer(property_instance)
                 return Response({
                     'success': True,
-                    'message': 'AI analysis completed successfully',
+                    'message': f'AI analysis completed with grade {ai_analysis.get("overall_grade")}',
+                    'analysis': {
+                        'overall_grade': ai_analysis.get('overall_grade'),
+                        'confidence_score': ai_analysis.get('confidence_score'),
+                        'analysis_summary': ai_analysis.get('analysis_summary'),
+                        'red_flags_count': len(ai_analysis.get('red_flags', [])),
+                        'positive_indicators_count': len(ai_analysis.get('positive_indicators', []))
+                    },
                     'property': serializer.data
                 })
             else:
-                logger.error(f"AI analysis failed for property {property_instance.id}")
+                logger.error(f"AI analysis failed for property {property_instance.id}: {ai_analysis}")
                 return Response(
-                    {'error': 'AI analysis failed or returned empty results'}, 
+                    {
+                        'error': 'AI analysis failed or returned empty results',
+                        'details': ai_analysis.get('error') if ai_analysis else 'No analysis result returned'
+                    }, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
                 
         except Exception as e:
-            logger.error(f"Manual AI analysis failed for property {pk}: {e}")
+            logger.error(f"AI analysis failed for property {pk}: {e}", exc_info=True)
+            return Response(
+                {'error': f'AI analysis failed: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['post'])
+    def analyze_property_data(self, request):
+        """
+        Run AI analysis on property data without saving the property first.
+        Used for preview analysis before saving.
+        """
+        try:
+            # Get property data from request
+            property_data = request.data
+            
+            # Validate required fields
+            required_fields = ['address', 'imageUrls']
+            for field in required_fields:
+                if not property_data.get(field):
+                    return Response(
+                        {'error': f'{field} is required for AI analysis'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            image_urls = property_data.get('imageUrls', [])
+            if not image_urls or len(image_urls) == 0:
+                return Response(
+                    {'error': 'Property must have images for AI analysis'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            logger.info(f"AI analysis triggered for property data with {len(image_urls)} images")
+            
+            # Get AI analyzer
+            analyzer = get_ai_analyzer()
+            
+            # Prepare data for AI analysis
+            ai_input_data = {
+                'address': property_data.get('address'),
+                'price': float(property_data['price']) if property_data.get('price') else None,
+                'imageUrls': image_urls,
+                'description': property_data.get('notes', ''),
+                'beds': int(property_data['beds']) if property_data.get('beds') else None,
+                'baths': float(property_data['baths']) if property_data.get('baths') else None,
+                'sqft': int(property_data['sqft']) if property_data.get('sqft') else None
+            }
+            
+            # Run AI analysis
+            ai_analysis = analyzer.analyze_property_comprehensive(ai_input_data)
+            
+            if ai_analysis and not ai_analysis.get('error'):
+                logger.info(f"AI analysis completed with grade: {ai_analysis.get('overall_grade')}")
+                
+                # Return analysis results without saving
+                return Response({
+                    'success': True,
+                    'message': f'AI analysis completed with grade {ai_analysis.get("overall_grade")}',
+                    'analysis': ai_analysis
+                })
+            else:
+                logger.error(f"AI analysis failed: {ai_analysis}")
+                return Response(
+                    {
+                        'error': 'AI analysis failed or returned empty results',
+                        'details': ai_analysis.get('error') if ai_analysis else 'No analysis result returned'
+                    }, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+                
+        except Exception as e:
+            logger.error(f"AI analysis failed: {e}", exc_info=True)
             return Response(
                 {'error': f'AI analysis failed: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

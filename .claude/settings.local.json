@@ -43,7 +43,8 @@
       "Bash(./venv/Scripts/python.exe:*)",
       "WebFetch(domain:www.zealty.ca)",
       "Bash(\"venv\\Scripts\\python.exe\" debug_test.py)",
-      "Bash(pip freeze)"
+      "Bash(pip freeze)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

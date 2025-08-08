@@ -184,8 +184,12 @@ export function PropertyProvider({ children }) {
         localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
         return newProperties;
       });
+      
+      // Return the saved property with ID for further processing
+      return savedPropertyWithDefaults;
     } catch (error) {
       console.error('Failed to add property:', error);
+      throw error; // Re-throw so caller can handle the error
     }
   }, [authenticatedFetch]); // Depends on authenticatedFetch
 

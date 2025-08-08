@@ -36,6 +36,10 @@ function AddProperty() {
   
   // State for AI analysis
   const [aiAnalysisData, setAiAnalysisData] = useState(null);
+  const [canRunAnalysis, setCanRunAnalysis] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState('');
+  const [scrapedDescription, setScrapedDescription] = useState('');
 
   // --- Input Change Handlers ---
   // Simple handlers to update state based on input changes
@@ -108,19 +112,19 @@ function AddProperty() {
         setImageUrlsString(data.images.join('\n'));
       }
 
-      // Handle AI analysis if available
-      if (data.ai_analysis) {
-        setAiAnalysisData(data.ai_analysis);
-        const grade = data.ai_analysis.overall_grade || 'Unknown';
-        const redFlagsCount = data.ai_analysis.red_flags?.length || 0;
-        
-        if (redFlagsCount > 0) {
-          showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} with ${redFlagsCount} potential issues detected.`);
-        } else {
-          showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} - No major issues detected!`);
-        }
+      // Store scraped description for AI analysis
+      if (data.description) {
+        setScrapedDescription(data.description);
+      }
+
+      // Check if AI analysis can be run
+      const hasImages = data.images && data.images.length > 0;
+      setCanRunAnalysis(hasImages);
+      
+      if (hasImages) {
+        showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 You can now run AI analysis to get insights about this property.`);
       } else {
-        showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.`);
+        showSuccess(`✅ Auto-filled property data! No images found - AI analysis requires property images.`);
       }
       
     } catch (error) {
@@ -136,6 +140,92 @@ function AddProperty() {
     } finally {
       setIsAutoFilling(false);
       setAutoFillStatus('');
+    }
+  };
+
+  // --- AI Analysis Handler ---
+  const handleRunAnalysis = async () => {
+    // Validate required fields for analysis
+    if (!address.trim()) {
+      showWarning('Please fill in Address before running AI analysis.');
+      return;
+    }
+
+    if (!imageUrlsString.trim()) {
+      showWarning('Please add image URLs before running AI analysis.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisStatus('🤖 Analyzing property images...');
+
+    try {
+      // Parse image URLs from string
+      const imageUrlsArray = imageUrlsString
+        .split(/[\n,]+/)
+        .map(url => url.trim())
+        .filter(url => url);
+
+      if (imageUrlsArray.length === 0) {
+        throw new Error('No valid image URLs found');
+      }
+
+      // Combine user notes with scraped description for comprehensive analysis
+      const combinedDescription = [
+        notes.trim(),
+        scrapedDescription ? `\n\nListing Description:\n${scrapedDescription}` : ''
+      ].filter(text => text).join('');
+
+      // Prepare data for analysis (without saving)
+      const propertyData = {
+        address: address.trim(),
+        price: parseFloat(price) || null,
+        beds: parseInt(beds) || null,
+        baths: parseFloat(baths) || null,
+        sqft: parseInt(sqft) || null,
+        notes: combinedDescription,
+        imageUrls: imageUrlsArray
+      };
+
+      setAnalysisStatus('🔍 Processing images and generating insights...');
+
+      // Run AI analysis without saving property
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+      const analysisResponse = await authenticatedFetch(`${API_BASE_URL}/properties/analyze_property_data/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(propertyData),
+      });
+
+      if (!analysisResponse.ok) {
+        const errorData = await analysisResponse.json();
+        throw new Error(errorData.error || 'AI analysis failed');
+      }
+
+      const analysisData = await analysisResponse.json();
+      
+      if (analysisData.success) {
+        setAiAnalysisData(analysisData.analysis);
+        const grade = analysisData.analysis?.overall_grade || 'Unknown';
+        const redFlagsCount = analysisData.analysis?.red_flags?.length || 0;
+        
+        if (redFlagsCount > 0) {
+          showSuccess(`🤖 AI Analysis Complete! Grade: ${grade} with ${redFlagsCount} potential issues detected. Review the results below before saving.`);
+        } else {
+          showSuccess(`🤖 AI Analysis Complete! Grade: ${grade} - No major issues detected! You can now save the property.`);
+        }
+      } else {
+        throw new Error(analysisData.error || 'Analysis failed');
+      }
+
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      showError(`AI analysis failed: ${error.message}`);
+    } finally {
+      setIsAnalyzing(false);
+      setAnalysisStatus('');
     }
   };
 
@@ -155,6 +245,12 @@ function AddProperty() {
         return;
     }
 
+    // Combine user notes with scraped description for storage
+    const combinedNotes = [
+      notes.trim(),
+      scrapedDescription ? `\n\nListing Description:\n${scrapedDescription}` : ''
+    ].filter(text => text).join('');
+
     // Prepare the data object to pass to the context's addProperty function
     const newPropertyData = {
       address: address.trim(), // Use trimmed address
@@ -166,7 +262,7 @@ function AddProperty() {
       sqft: parseInt(sqft) || null,
       // Pass the raw string - the context's addProperty function will parse it
       imageUrlsString: imageUrlsString,
-      notes: notes.trim(), // Use trimmed notes
+      notes: combinedNotes, // Use combined notes + scraped description
       // Include AI analysis data if available
       ...(aiAnalysisData && {
         aiAnalysis: aiAnalysisData,
@@ -200,7 +296,7 @@ function AddProperty() {
     try {
       // List of all state values that indicate user input
       const formHasData = [
-          address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes
+          address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes, scrapedDescription
           // latitude, longitude // Add if using lat/lon state
       ].some(value => value && value.toString().trim()); // Check if any value is truthy after trimming
 
@@ -227,7 +323,7 @@ function AddProperty() {
       // Fallback - just navigate away
       navigate('/properties');
     }
-  }, [address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes, showConfirm, navigate]); // End handleCancel
+  }, [address, listingUrl, price, beds, baths, sqft, imageUrlsString, notes, scrapedDescription, showConfirm, navigate]); // End handleCancel
 
 
   // --- Render the Form ---
@@ -261,6 +357,27 @@ function AddProperty() {
           {isAutoFilling && <small className="auto-fill-status">{autoFillStatus}</small>}
           {!isAutoFilling && <small className="auto-fill-help">📋 Paste a Realtor.ca, Redfin.ca, Zealty.ca, HouseSigma.com, or MLS listing URL above, then click Auto-Fill to extract property details automatically.</small>}
         </div>
+
+        {/* AI Analysis Section */}
+        {canRunAnalysis && (
+          <div className="form-group ai-analysis-section">
+            <label>🤖 AI Property Analysis</label>
+            <div className="ai-analysis-controls">
+              <button 
+                type="button" 
+                className="btn btn-ai-analysis" 
+                onClick={handleRunAnalysis}
+                disabled={isAnalyzing || !address.trim() || !imageUrlsString.trim()}
+              >
+                {isAnalyzing ? 'Analyzing...' : '🧠 Run AI Analysis'}
+              </button>
+              <small className="ai-analysis-help">
+                Get AI insights about potential issues, property condition, and price assessment based on the property images.
+              </small>
+            </div>
+            {isAnalyzing && <small className="analysis-status">{analysisStatus}</small>}
+          </div>
+        )}
 
         {/* Asking Price Input (Required, Number) */}
         <div className="form-group">
