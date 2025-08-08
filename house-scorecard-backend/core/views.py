@@ -920,10 +920,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
             
             # Images (Field 138) - pipe-delimited URLs
             if len(fields) > 138 and fields[138]:
-                image_urls = [url.strip() for url in fields[138].split('|') if url.strip()]
-                if image_urls:
-                    scraped_data['images'] = image_urls
-                    logger.info(f"Extracted {len(image_urls)} images")
+                raw_image_urls = [url.strip() for url in fields[138].split('|') if url.strip()]
+                if raw_image_urls:
+                    # Validate and optimize images for consistent sizing
+                    optimized_images = self._validate_and_optimize_images(raw_image_urls)
+                    scraped_data['images'] = optimized_images
+                    logger.info(f"Extracted {len(raw_image_urls)} images, optimized {len(optimized_images)}")
             
             # Add AI analysis if images are available
             if scraped_data.get('images'):
@@ -970,7 +972,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             raise Exception(f'Failed to extract data from Zealty.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
 
     def _extract_images(self, soup, base_url):
-        """Extract property images from various selectors."""
+        """Extract property images from various selectors with size validation."""
         image_urls = []
         
         # Check if this is a Redfin listing
@@ -981,14 +983,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
             logger.info("Detected Redfin listing, using meta tag extraction")
             meta_images = self._extract_redfin_images_from_meta(soup)
             if meta_images:
-                image_urls.extend(meta_images)
-                logger.info(f"Found {len(meta_images)} Redfin meta images")
+                # Validate and potentially resize Redfin images
+                validated_images = self._validate_and_optimize_images(meta_images)
+                image_urls.extend(validated_images)
+                logger.info(f"Found {len(validated_images)} validated Redfin images")
                 # If we have a good number of meta images, return them
-                if len(meta_images) >= 10:
-                    logger.info(f"Got {len(meta_images)} meta images, sufficient for analysis")
-                    return meta_images[:50] if meta_images else None
+                if len(validated_images) >= 10:
+                    logger.info(f"Got {len(validated_images)} images, sufficient for analysis")
+                    return validated_images[:20] if validated_images else None  # Reduced from 50 to 20
                 else:
-                    logger.info(f"Only got {len(meta_images)} meta images, will try additional methods")
+                    logger.info(f"Only got {len(validated_images)} images, will try additional methods")
         
         # Common selectors for property images
         selectors = [
@@ -1019,6 +1023,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             'img[alt*="listing"]',
         ]
         
+        raw_urls = []
         for selector in selectors:
             images = soup.select(selector)
             if images:
@@ -1028,12 +1033,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
                         # Convert relative URLs to absolute
                         full_url = urljoin(base_url, src)
                         if self._is_valid_image_url(full_url):
-                            if full_url not in image_urls:
-                                image_urls.append(full_url)
+                            if full_url not in raw_urls:
+                                raw_urls.append(full_url)
         
-        logger.info(f"Total images found: {len(image_urls)}")
-        # Return up to 50 images for comprehensive analysis
-        return image_urls[:50] if image_urls else None
+        # Validate and optimize all found images
+        validated_images = self._validate_and_optimize_images(raw_urls)
+        image_urls.extend(validated_images)
+        
+        logger.info(f"Total images found: {len(raw_urls)}, validated: {len(validated_images)}")
+        # Return up to 20 images for memory efficiency
+        return image_urls[:20] if image_urls else None
 
     def _extract_redfin_images_from_meta(self, soup):
         """Extract Redfin images from meta tags - more reliable method."""
@@ -1390,6 +1399,75 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Check for image extensions or image-related paths
         image_indicators = ['.jpg', '.jpeg', '.png', '.webp', '/photo/', '/image/', '/pic/']
         return any(indicator in url.lower() for indicator in image_indicators)
+    
+    def _validate_and_optimize_images(self, image_urls):
+        """Validate image URLs and optimize them for consistent sizing to prevent memory issues."""
+        if not image_urls:
+            return []
+        
+        optimized_urls = []
+        for url in image_urls:
+            try:
+                # For major real estate sites, try to get optimized/resized versions
+                optimized_url = self._get_optimized_image_url(url)
+                if optimized_url:
+                    optimized_urls.append(optimized_url)
+                else:
+                    # Keep original if optimization fails
+                    optimized_urls.append(url)
+            except Exception as e:
+                logger.warning(f"Failed to optimize image URL {url}: {e}")
+                # Keep original URL if optimization fails
+                optimized_urls.append(url)
+        
+        return optimized_urls
+    
+    def _get_optimized_image_url(self, original_url):
+        """Get optimized/resized version of image URL for consistent sizing."""
+        if not original_url:
+            return original_url
+        
+        # Redfin images - use medium size (512px width)
+        if 'ssl.cdn-redfin.com' in original_url:
+            # Replace size parameters with medium size for consistency
+            # Pattern: /genMid.1234_5.jpg -> /genMid.1234_5.jpg (already good size)
+            # Pattern: /genHiRes.1234_5.jpg -> /genMid.1234_5.jpg
+            if '/genHiRes.' in original_url:
+                optimized_url = original_url.replace('/genHiRes.', '/genMid.')
+                logger.debug(f"Optimized Redfin URL: {original_url} -> {optimized_url}")
+                return optimized_url
+            # Keep genMid and genLowRes as they are reasonable sizes
+            return original_url
+        
+        # Realtor.ca images - use medium size
+        elif 'cdn.realtor.ca' in original_url:
+            # Realtor.ca uses size parameters like: ?w=1024&h=768&fit=crop
+            # Replace with consistent medium size
+            if '?' in original_url:
+                base_url = original_url.split('?')[0]
+                optimized_url = f"{base_url}?w=512&h=384&fit=crop&quality=80"
+                logger.debug(f"Optimized Realtor.ca URL: {original_url} -> {optimized_url}")
+                return optimized_url
+            else:
+                # Add size parameters if none exist
+                optimized_url = f"{original_url}?w=512&h=384&fit=crop&quality=80"
+                return optimized_url
+        
+        # Zealty.ca and other sites - try to append size parameters
+        elif any(domain in original_url for domain in ['zealty.ca', 'housesigma.com']):
+            # These sites might support size parameters
+            if '?' in original_url:
+                # Check if size params already exist
+                if not any(param in original_url for param in ['w=', 'width=', 'size=']):
+                    optimized_url = f"{original_url}&w=512&h=384"
+                    return optimized_url
+            else:
+                optimized_url = f"{original_url}?w=512&h=384"
+                return optimized_url
+        
+        # For other domains, return original URL
+        # The analyzer will still resize during download if needed
+        return original_url
     
     @action(detail=True, methods=['post'])
     def analyze_with_ai(self, request, pk=None):

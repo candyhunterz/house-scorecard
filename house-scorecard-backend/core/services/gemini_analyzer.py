@@ -46,9 +46,15 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 image = image.convert('RGB')
             
             # Resize if too large (Gemini has size limits) - use smaller size for memory efficiency
-            max_size = 512  # Reduced from 1024 to save memory
+            max_size = 384  # Reduced from 512 to save even more memory
             if image.width > max_size or image.height > max_size:
                 image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+            # Ensure minimum size to maintain quality for analysis
+            min_size = 256
+            if image.width < min_size and image.height < min_size:
+                # If image is too small, resize it to minimum size
+                image = image.resize((min_size, min_size), Image.Resampling.LANCZOS)
             
             return image
             
@@ -64,7 +70,7 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             image_urls = property_data.get('imageUrls', [])
             
             # Process ALL images in batches for comprehensive analysis
-            max_images_per_batch = getattr(settings, 'AI_MAX_IMAGES_PER_ANALYSIS', 3)
+            max_images_per_batch = getattr(settings, 'AI_MAX_IMAGES_PER_ANALYSIS', 2)  # Reduced from 3 to 2
             
             # Limit total images processed to prevent memory issues
             if len(image_urls) > 20:
@@ -108,6 +114,11 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 if image:
                     images.append(image)
                     successful_downloads += 1
+                
+                # Force cleanup after each image to manage memory
+                if successful_downloads % 2 == 0:  # Every 2 images
+                    import gc
+                    gc.collect()
             
             if len(images) == 0:
                 logger.error("Failed to download any images for analysis")
@@ -190,6 +201,10 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                     logger.info(f"Batch {batch_num + 1} completed successfully")
                 else:
                     logger.warning(f"Batch {batch_num + 1} failed or had errors")
+                
+                # Force garbage collection between batches to free memory
+                import gc
+                gc.collect()
             
             if not batch_results:
                 logger.error("All batches failed")
