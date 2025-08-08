@@ -99,6 +99,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# CSRF settings for cross-origin requests
+CSRF_TRUSTED_ORIGINS = [
+    'https://house-scorecard.vercel.app',
+]
+
 ROOT_URLCONF = 'scorecard_project.urls'
 
 TEMPLATES = [
@@ -174,11 +179,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
+# CORS settings - More permissive for deployment debugging
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'https://house-scorecard.vercel.app',
 ]
+
+# Temporarily allow all origins for debugging (remove in production)
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Allow additional headers for authentication
 CORS_ALLOW_HEADERS = [
@@ -195,6 +203,16 @@ CORS_ALLOW_HEADERS = [
 
 # Allow credentials
 CORS_ALLOW_CREDENTIALS = True
+
+# Allow all methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # AI Analysis settings
 AI_PROVIDER = os.environ.get('AI_PROVIDER', 'gemini')  # Default to Gemini

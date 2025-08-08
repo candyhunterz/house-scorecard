@@ -1479,6 +1479,7 @@ class RatingViewSet(viewsets.ModelViewSet):
 # Health Check Views
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
 
 class HealthCheckView(APIView):
     """
@@ -1504,3 +1505,15 @@ class HealthCheckView(APIView):
                 'error': str(e),
                 'timestamp': __import__('datetime').datetime.now().isoformat()
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+# Simple CORS test endpoint
+@api_view(['GET', 'POST', 'OPTIONS'])
+@permission_classes([AllowAny])
+def cors_test(request):
+    """Simple endpoint to test CORS configuration"""
+    return Response({
+        'message': 'CORS is working',
+        'method': request.method,
+        'origin': request.META.get('HTTP_ORIGIN', 'No origin header'),
+        'user_agent': request.META.get('HTTP_USER_AGENT', 'No user agent')
+    })
