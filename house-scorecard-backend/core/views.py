@@ -19,6 +19,83 @@ except ImportError as e:
     PLAYWRIGHT_AVAILABLE = False
     sync_playwright = None
     Stealth = None
+
+# Global browser instance manager for memory efficiency (expert recommendation)
+_playwright_instance = None
+_playwright_browser = None
+_playwright_context = None
+
+def _get_or_create_browser():
+    """Get existing browser or create new one with optimal settings"""
+    global _playwright_instance, _playwright_browser, _playwright_context
+    
+    try:
+        if not PLAYWRIGHT_AVAILABLE:
+            raise Exception("Playwright not available")
+            
+        # Create playwright instance if needed
+        if _playwright_instance is None:
+            _playwright_instance = sync_playwright().start()
+            
+        # Create browser if needed
+        if _playwright_browser is None or not _playwright_browser.is_connected():
+            import os
+            if not os.environ.get('PLAYWRIGHT_BROWSERS_PATH'):
+                os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
+            
+            _playwright_browser = _playwright_instance.chromium.launch(
+                headless=True,  # Critical: prevents UI rendering
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox', 
+                    '--disable-dev-shm-usage',  # Crucial for Docker/Linux environments
+                    '--disable-extensions',
+                    '--disable-gpu',  # Often helps in headless environments
+                    '--disable-gl-drawing-for-tests',  # Can offer huge memory gains
+                    '--disable-plugins',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--disable-background-timer-throttling',
+                    '--disable-renderer-backgrounding',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-ipc-flooding-protection',
+                    '--max_old_space_size=128',  # Reduced for 512MB limit
+                    '--memory-pressure-off',
+                    '--window-size=800,600'
+                ]
+            )
+            
+        # Create new context for each request (clean state)
+        if _playwright_context:
+            _playwright_context.close()
+            
+        _playwright_context = _playwright_browser.new_context(
+            viewport={'width': 800, 'height': 600},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        )
+        
+        return _playwright_context
+        
+    except Exception as e:
+        logger.error(f"Failed to create/get browser: {e}")
+        raise
+
+def _cleanup_browser():
+    """Clean up browser resources"""
+    global _playwright_instance, _playwright_browser, _playwright_context
+    
+    try:
+        if _playwright_context:
+            _playwright_context.close()
+            _playwright_context = None
+        if _playwright_browser:
+            _playwright_browser.close() 
+            _playwright_browser = None
+        if _playwright_instance:
+            _playwright_instance.stop()
+            _playwright_instance = None
+    except Exception as e:
+        logger.error(f"Error during browser cleanup: {e}")
 from urllib.parse import urljoin, urlparse
 import time
 import random
@@ -78,53 +155,34 @@ def geocode_address(address):
 
 def _scrape_with_playwright(url):
     """
-    Advanced scraping using Playwright with stealth mode for bypassing sophisticated anti-bot protection.
+    Memory-optimized Playwright scraping using reusable browser instance (expert recommendation)
     """
     if not PLAYWRIGHT_AVAILABLE:
         raise Exception("Playwright not available - falling back to curl_cffi")
     
-    logger.info(f"Starting Playwright scraping for: {url}")
+    logger.info(f"Starting optimized Playwright scraping for: {url}")
     
     try:
-        # Set environment variable for Render deployment
-        import os
-        if not os.environ.get('PLAYWRIGHT_BROWSERS_PATH'):
-            os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
+        # Get or create reusable browser context (saves memory)
+        context = _get_or_create_browser()
         
-        with sync_playwright() as p:
-            # Launch browser with memory-optimized settings for Render
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-plugins',
-                    '--disable-web-security',
-                    '--disable-features=VizDisplayCompositor',
-                    '--memory-pressure-off',
-                    '--max_old_space_size=256',
-                    '--disable-background-timer-throttling',
-                    '--disable-renderer-backgrounding',
-                    '--window-size=800,600'
-                ]
-            )
-            
-            # Create new page with memory-optimized viewport
-            page = browser.new_page(
-                viewport={'width': 800, 'height': 600},
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            )
-            
-            # Block unnecessary resources to save memory
-            page.route("**/*.{png,jpg,jpeg,gif,svg,ico,woff,woff2}", lambda route: route.abort())
-            page.route("**/analytics*", lambda route: route.abort())
-            page.route("**/gtag*", lambda route: route.abort())
-            
-            # Apply stealth mode to avoid detection
-            stealth = Stealth()
-            stealth.apply_stealth_sync(page)
+        # Create new page in existing context
+        page = context.new_page()
+        
+        # Block all memory-intensive resources (expert recommendation) 
+        page.route("**/*.{png,jpg,jpeg,gif,svg,ico,webp,bmp,tiff}", lambda route: route.abort())  # Images
+        page.route("**/*.{css,scss,sass,less}", lambda route: route.abort())  # Stylesheets  
+        page.route("**/*.{woff,woff2,ttf,otf,eot}", lambda route: route.abort())  # Fonts
+        page.route("**/analytics*", lambda route: route.abort())  # Analytics
+        page.route("**/gtag*", lambda route: route.abort())  # Google Analytics
+        page.route("**/facebook.com/tr*", lambda route: route.abort())  # Facebook Pixel
+        page.route("**/googleadservices.com*", lambda route: route.abort())  # Google Ads
+        page.route("**/doubleclick.net*", lambda route: route.abort())  # DoubleClick
+        page.route("**/*.{mp4,mp3,wav,webm,avi,mov}", lambda route: route.abort())  # Media files
+        
+        # Apply stealth mode to avoid detection
+        stealth = Stealth()
+        stealth.apply_stealth_sync(page)
             
             # Set additional headers to appear more human-like
             page.set_extra_http_headers({
@@ -177,7 +235,8 @@ def _scrape_with_playwright(url):
                     except:
                         pass
             
-            browser.close()
+            # Close only the page, keep browser/context for reuse (expert recommendation)
+            page.close()
             
             # Validate content
             if len(content) < 5000:
@@ -188,6 +247,12 @@ def _scrape_with_playwright(url):
             
     except Exception as e:
         logger.error(f"Playwright scraping failed: {str(e)}")
+        # Only close page on error, keep browser instance
+        try:
+            if 'page' in locals():
+                page.close()
+        except:
+            pass
         raise e
 
 # Configure logger for scraping operations
