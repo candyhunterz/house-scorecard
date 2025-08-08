@@ -197,47 +197,42 @@ def _scrape_with_playwright(url):
             'Cache-Control': 'max-age=0'
         })
         
-        # For realtor.ca, minimal approach to save memory
+        # For realtor.ca, ultra-fast minimal approach
         if 'realtor.ca' in url.lower():
             try:
-                logger.info("Step 1: Visiting realtor.ca homepage")
-                # Quick homepage visit to establish session
-                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=10000)
-                time.sleep(random.uniform(1.0, 2.0))
+                logger.info("Quick homepage visit")
+                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=5000)
+                time.sleep(0.5)  # Minimal delay
                 logger.info("Homepage visit complete")
                 
             except Exception as e:
-                logger.warning(f"Homepage visit failed: {e}, proceeding direct")
+                logger.warning(f"Homepage visit failed: {e}")
         
-        # Navigate to target URL - minimal approach
+        # Navigate to target URL with very short timeout
         logger.info(f"Navigating to target URL: {url}")
-        response = page.goto(url, wait_until='domcontentloaded', timeout=10000)
+        response = page.goto(url, wait_until='domcontentloaded', timeout=5000)
         
         if not response:
             raise Exception("Failed to get response from page")
         
-        # Minimal wait to save memory
-        time.sleep(random.uniform(0.5, 1.0))
+        # Ultra-minimal wait
+        time.sleep(0.3)
         
-        # Short network idle wait
+        # Very short network idle wait or skip entirely
         try:
-            page.wait_for_load_state('networkidle', timeout=3000)
+            page.wait_for_load_state('networkidle', timeout=2000)
         except:
-            logger.info("Network idle timeout reached")
+            logger.info("Skipping network idle wait")
         
         # Get page content
         content = page.content()
         logger.info(f"Page loaded successfully, content length: {len(content)} characters")
         
-        # Simple blocking check - memory optimized
-        if len(content) < 2000:
-            logger.warning(f"Short content detected ({len(content)} chars), trying simple retry")
-            try:
-                time.sleep(2)
-                content = page.content()
-                logger.info(f"Retry complete, new content length: {len(content)} characters")
-            except:
-                pass
+        # Very simple blocking check - no retry to save memory
+        if len(content) < 1000:
+            logger.warning(f"Very short content ({len(content)} chars) - likely blocked")
+        elif len(content) < 3000:
+            logger.warning(f"Short content ({len(content)} chars) - possible blocking")
         
         # Close only the page, keep browser/context for reuse (expert recommendation)
         page.close()
