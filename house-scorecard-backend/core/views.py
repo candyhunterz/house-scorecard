@@ -35,12 +35,27 @@ from .services.gemini_analyzer import get_ai_analyzer
 # Geocoding service using OpenStreetMap Nominatim API
 def geocode_address(address):
     try:
+        # Clean up address format for better geocoding results
+        clean_address = address.strip()
+        
+        # Handle common Canadian address formats
+        if clean_address.startswith('#'):
+            # Convert "#18 3303 STREET" to "3303 STREET UNIT 18" 
+            parts = clean_address.split(' ', 2)
+            if len(parts) >= 3:
+                unit = parts[0][1:]  # Remove #
+                street_num = parts[1] 
+                rest = parts[2]
+                clean_address = f"{street_num} {rest}, Unit {unit}"
+        
+        logger.info(f"Geocoding address: '{address}' -> '{clean_address}'")
+        
         # Use curl_cffi for geocoding as well to maintain consistency
         response = cf_requests.get(
             f'https://nominatim.openstreetmap.org/search',
             params={
                 'format': 'json',
-                'q': address,
+                'q': clean_address,
                 'limit': 1,
                 'countrycodes': 'ca,us'
             },
@@ -71,6 +86,11 @@ def _scrape_with_playwright(url):
     logger.info(f"Starting Playwright scraping for: {url}")
     
     try:
+        # Set environment variable for Render deployment
+        import os
+        if not os.environ.get('PLAYWRIGHT_BROWSERS_PATH'):
+            os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
+        
         with sync_playwright() as p:
             # Launch browser with stealth settings
             browser = p.chromium.launch(

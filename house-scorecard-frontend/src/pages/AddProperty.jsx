@@ -252,11 +252,9 @@ function AddProperty() {
         return;
     }
 
-    // Combine user notes with scraped description for storage
-    const combinedNotes = [
-      notes.trim(),
-      scrapedDescription ? `\n\nListing Description:\n${scrapedDescription}` : ''
-    ].filter(text => text).join('');
+    // Use the notes as they are (already contain scraped description from autofill)
+    // No need to add scrapedDescription again as it's already in notes
+    const combinedNotes = notes.trim();
 
     // Prepare the data object to pass to the context's addProperty function
     const newPropertyData = {

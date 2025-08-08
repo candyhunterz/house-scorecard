@@ -45,13 +45,13 @@ def check_ai_configuration():
                 'message': f"Failed to initialize Gemini analyzer: {str(e)}"
             }
     
-    # Check Celery configuration
-    celery_broker = getattr(settings, 'CELERY_BROKER_URL', None)
-    checks['celery_broker'] = {
-        'status': 'ok' if celery_broker else 'warning',
-        'value': celery_broker,
-        'message': "Celery broker configured" if celery_broker else "CELERY_BROKER_URL not set - background tasks disabled"
-    }
+    # Skip Celery configuration check - not using background tasks
+    # celery_broker = getattr(settings, 'CELERY_BROKER_URL', None)
+    # checks['celery_broker'] = {
+    #     'status': 'ok' if celery_broker else 'warning',
+    #     'value': celery_broker,
+    #     'message': "Celery broker configured" if celery_broker else "CELERY_BROKER_URL not set - background tasks disabled"
+    # }
     
     # Redis connection check disabled - using separated analysis approach instead of background tasks
     # if celery_broker and 'redis://' in celery_broker:
