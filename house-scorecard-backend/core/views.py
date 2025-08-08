@@ -557,6 +557,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return Response(scraped_data)
 
         except Exception as e:
+            logger.error(f"Scraping error: {str(e)}", exc_info=True)
             return Response(
                 {'error': f'Scraping failed: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -779,11 +780,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Remove None values
         scraped_data = {k: v for k, v in scraped_data.items() if v is not None}
         
-        # Add AI analysis if images are available
-        if scraped_data.get('images'):
+        # Temporarily disable AI analysis during scraping to prevent memory issues
+        disable_ai_during_scraping = True  # Set to False to re-enable
+        
+        if scraped_data.get('images') and not disable_ai_during_scraping:
             try:
                 logger.info("Starting AI analysis of scraped property data")
                 analyzer = get_ai_analyzer()
+                
+                # Limit images for memory efficiency
+                images = scraped_data.get('images', [])[:3]  # Only use first 3 images
                 
                 # Prepare data for AI analysis
                 ai_input_data = {
@@ -792,7 +798,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     'beds': scraped_data.get('beds'),
                     'baths': scraped_data.get('baths'),
                     'sqft': scraped_data.get('sqft'),
-                    'imageUrls': scraped_data.get('images', []),
+                    'imageUrls': images,
                     'description': scraped_data.get('description', 'No description extracted from listing')
                 }
                 
@@ -812,7 +818,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     'analysis_summary': 'AI analysis could not be completed'
                 }
         else:
-            logger.info("No images available for AI analysis")
+            if disable_ai_during_scraping:
+                logger.info("AI analysis disabled during scraping to prevent memory issues")
+            else:
+                logger.info("No images available for AI analysis")
         
         return scraped_data
 
