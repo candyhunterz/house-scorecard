@@ -92,27 +92,35 @@ def _scrape_with_playwright(url):
             os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
         
         with sync_playwright() as p:
-            # Launch browser with stealth settings
+            # Launch browser with memory-optimized settings for Render
             browser = p.chromium.launch(
                 headless=True,
                 args=[
                     '--no-sandbox',
-                    '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
+                    '--disable-gpu',
                     '--disable-extensions',
-                    '--no-first-run',
-                    '--disable-default-apps',
-                    '--disable-features=TranslateUI',
-                    '--disable-ipc-flooding-protection',
-                    '--window-size=1920,1080'
+                    '--disable-plugins',
+                    '--disable-web-security',
+                    '--disable-features=VizDisplayCompositor',
+                    '--memory-pressure-off',
+                    '--max_old_space_size=256',
+                    '--disable-background-timer-throttling',
+                    '--disable-renderer-backgrounding',
+                    '--window-size=800,600'
                 ]
             )
             
-            # Create new page with realistic viewport
+            # Create new page with memory-optimized viewport
             page = browser.new_page(
-                viewport={'width': 1920, 'height': 1080},
+                viewport={'width': 800, 'height': 600},
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             )
+            
+            # Block unnecessary resources to save memory
+            page.route("**/*.{png,jpg,jpeg,gif,svg,ico,woff,woff2}", lambda route: route.abort())
+            page.route("**/analytics*", lambda route: route.abort())
+            page.route("**/gtag*", lambda route: route.abort())
             
             # Apply stealth mode to avoid detection
             stealth = Stealth()
@@ -130,24 +138,27 @@ def _scrape_with_playwright(url):
                 try:
                     logger.info("Step 1: Visiting realtor.ca homepage with Playwright")
                     # First visit homepage to establish session
-                    page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=30000)
+                    page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=15000)
                     
-                    # Human-like delay
-                    time.sleep(random.uniform(2.0, 4.0))
+                    # Short delay to save memory
+                    time.sleep(random.uniform(1.0, 2.0))
                     logger.info("Homepage visit successful, proceeding to listing")
                     
                 except Exception as e:
                     logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
             
-            # Navigate to target URL
+            # Navigate to target URL with shorter timeout
             logger.info(f"Navigating to target URL: {url}")
-            response = page.goto(url, wait_until='domcontentloaded', timeout=30000)
+            response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
             
             if not response:
                 raise Exception("Failed to get response from page")
             
-            # Wait for page to load completely
-            page.wait_for_load_state('networkidle', timeout=10000)
+            # Wait for page to load with shorter timeout to prevent memory buildup
+            try:
+                page.wait_for_load_state('networkidle', timeout=5000)
+            except:
+                logger.info("Network idle timeout reached, proceeding with current content")
             
             # Get page content
             content = page.content()
