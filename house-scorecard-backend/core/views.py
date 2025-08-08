@@ -197,84 +197,46 @@ def _scrape_with_playwright(url):
             'Cache-Control': 'max-age=0'
         })
         
-        # For realtor.ca, use enhanced multi-step approach to bypass detection
+        # For realtor.ca, minimal approach to save memory
         if 'realtor.ca' in url.lower():
             try:
-                logger.info("Step 1: Visiting realtor.ca homepage with enhanced stealth")
-                
-                # First visit homepage to establish session
-                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=15000)
-                
-                # Simulate human behavior - scroll and mouse movement
-                page.evaluate("window.scrollTo(0, Math.floor(Math.random() * 500))")
-                time.sleep(random.uniform(2.0, 4.0))
-                
-                # Simulate clicking on a common element to appear more human
-                try:
-                    page.evaluate("document.body.click()")
-                except:
-                    pass
-                
-                # Random delay before proceeding
-                time.sleep(random.uniform(1.5, 3.0))
-                logger.info("Homepage interaction complete, proceeding to target")
+                logger.info("Step 1: Visiting realtor.ca homepage")
+                # Quick homepage visit to establish session
+                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=10000)
+                time.sleep(random.uniform(1.0, 2.0))
+                logger.info("Homepage visit complete")
                 
             except Exception as e:
-                logger.warning(f"Homepage visit failed: {e}, proceeding direct to listing")
+                logger.warning(f"Homepage visit failed: {e}, proceeding direct")
         
-        # Navigate to target URL with realistic behavior
+        # Navigate to target URL - minimal approach
         logger.info(f"Navigating to target URL: {url}")
-        response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
+        response = page.goto(url, wait_until='domcontentloaded', timeout=10000)
         
         if not response:
             raise Exception("Failed to get response from page")
         
-        # Simulate human reading/browsing behavior
-        page.evaluate("window.scrollTo(0, Math.floor(Math.random() * 300))")
-        time.sleep(random.uniform(1.0, 2.5))
+        # Minimal wait to save memory
+        time.sleep(random.uniform(0.5, 1.0))
         
-        # Wait for page to load with shorter timeout to prevent memory buildup
+        # Short network idle wait
         try:
-            page.wait_for_load_state('networkidle', timeout=8000)
+            page.wait_for_load_state('networkidle', timeout=3000)
         except:
-            logger.info("Network idle timeout reached, proceeding with current content")
-            
-        # Additional human-like interaction before getting content
-        try:
-            page.evaluate("document.documentElement.scrollTop = Math.floor(Math.random() * 200)")
-            time.sleep(random.uniform(0.5, 1.5))
-        except:
-            pass
+            logger.info("Network idle timeout reached")
         
         # Get page content
         content = page.content()
         logger.info(f"Page loaded successfully, content length: {len(content)} characters")
         
-        # Check if we're still blocked with enhanced detection
-        content_lower = content.lower()
-        blocked_indicators = ['incapsula', 'blocked', 'security check', 'access denied', 'cloudflare', 'protection', 'ddos', 'bot detected']
-        
-        if any(indicator in content_lower for indicator in blocked_indicators) or len(content) < 3000:
-            logger.warning(f"Potential blocking detected - content length: {len(content)}, trying enhanced bypass")
-            
-            # Enhanced retry with more human-like behavior
+        # Simple blocking check - memory optimized
+        if len(content) < 2000:
+            logger.warning(f"Short content detected ({len(content)} chars), trying simple retry")
             try:
-                # Simulate mouse movement and additional delays
-                page.mouse.move(random.randint(100, 400), random.randint(100, 300))
-                time.sleep(random.uniform(2.0, 4.0))
-                
-                # Scroll more naturally
-                for _ in range(3):
-                    page.evaluate(f"window.scrollBy(0, {random.randint(50, 200)})")
-                    time.sleep(random.uniform(0.8, 1.5))
-                
-                # Wait longer and retry content
-                page.wait_for_timeout(8000)
+                time.sleep(2)
                 content = page.content()
-                logger.info(f"Enhanced retry complete, new content length: {len(content)} characters")
-                
-            except Exception as retry_error:
-                logger.warning(f"Enhanced retry failed: {retry_error}")
+                logger.info(f"Retry complete, new content length: {len(content)} characters")
+            except:
                 pass
         
         # Close only the page, keep browser/context for reuse (expert recommendation)
