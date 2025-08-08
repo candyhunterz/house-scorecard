@@ -112,9 +112,16 @@ function AddProperty() {
         setImageUrlsString(data.images.join('\n'));
       }
 
-      // Store scraped description for AI analysis
+      // Store scraped description and add to notes field
       if (data.description) {
         setScrapedDescription(data.description);
+        // Add scraped description to notes if notes field is empty
+        if (!notes.trim()) {
+          setNotes(`Listing Description:\n${data.description}`);
+        } else {
+          // Append to existing notes if there are already some
+          setNotes(prevNotes => `${prevNotes}\n\nListing Description:\n${data.description}`);
+        }
       }
 
       // Check if AI analysis can be run

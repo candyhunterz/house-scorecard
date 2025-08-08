@@ -138,6 +138,72 @@ function PropertyDetail() {
     const [prevRatings, setPrevRatings] = useState({});
     // AI analysis state
     const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+    
+    // Image carousel state
+    const [isCarouselOpen, setIsCarouselOpen] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // --- Carousel Handler Functions ---
+    const openCarousel = (imageIndex) => {
+        setCurrentImageIndex(imageIndex);
+        setIsCarouselOpen(true);
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    };
+
+    const closeCarousel = () => {
+        setIsCarouselOpen(false);
+        setCurrentImageIndex(0);
+        document.body.style.overflow = 'unset'; // Restore scrolling
+    };
+
+    const goToPreviousImage = () => {
+        if (property?.imageUrls && property.imageUrls.length > 0) {
+            setCurrentImageIndex((prevIndex) => 
+                prevIndex === 0 ? property.imageUrls.length - 1 : prevIndex - 1
+            );
+        }
+    };
+
+    const goToNextImage = () => {
+        if (property?.imageUrls && property.imageUrls.length > 0) {
+            setCurrentImageIndex((prevIndex) => 
+                prevIndex === property.imageUrls.length - 1 ? 0 : prevIndex + 1
+            );
+        }
+    };
+
+    // Keyboard navigation effect
+    useEffect(() => {
+        if (!isCarouselOpen) return;
+
+        const handleKeyDown = (event) => {
+            switch (event.key) {
+                case 'Escape':
+                    closeCarousel();
+                    break;
+                case 'ArrowLeft':
+                    goToPreviousImage();
+                    break;
+                case 'ArrowRight':
+                    goToNextImage();
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isCarouselOpen, property?.imageUrls]);
+
+    // Cleanup effect to restore scroll on component unmount
+    useEffect(() => {
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, []);
 
     // --- Effects ---
     // Effect 1: Load property data and set INITIAL state when propertyId changes
@@ -419,10 +485,14 @@ function PropertyDetail() {
                         <div className="image-gallery">
                             {property.imageUrls.map((url, index) => (
                                 <div key={index} className="gallery-item">
-                                    {/* Link opens image in new tab */}
-                                    <a href={url} target="_blank" rel="noopener noreferrer" title="View full size">
+                                    {/* Click to open carousel */}
+                                    <div 
+                                        className="gallery-image-container" 
+                                        onClick={() => openCarousel(index)}
+                                        title="Click to view in carousel"
+                                    >
                                         <img src={url} alt={`Property view ${index + 1}`} loading="lazy"/>
-                                    </a>
+                                    </div>
                                     {/* Placeholder for future delete image button */}
                                     {/* <button className="delete-image-btn">×</button> */}
                                 </div>
@@ -589,6 +659,68 @@ function PropertyDetail() {
             {/* --- End Status History Section --- */}
 
             {/* Confirmation Dialog */}
+            {/* Image Carousel Modal */}
+            {isCarouselOpen && property?.imageUrls && property.imageUrls.length > 0 && (
+                <div className="carousel-overlay" onClick={closeCarousel}>
+                    <div className="carousel-modal" onClick={(e) => e.stopPropagation()}>
+                        {/* Close button */}
+                        <button className="carousel-close" onClick={closeCarousel} title="Close">
+                            <i className="fas fa-times"></i>
+                        </button>
+                        
+                        {/* Main image */}
+                        <div className="carousel-image-container">
+                            <img 
+                                src={property.imageUrls[currentImageIndex]} 
+                                alt={`Property view ${currentImageIndex + 1}`}
+                                className="carousel-image"
+                            />
+                        </div>
+                        
+                        {/* Navigation arrows */}
+                        {property.imageUrls.length > 1 && (
+                            <>
+                                <button 
+                                    className="carousel-arrow carousel-prev" 
+                                    onClick={goToPreviousImage}
+                                    title="Previous image"
+                                >
+                                    <i className="fas fa-chevron-left"></i>
+                                </button>
+                                <button 
+                                    className="carousel-arrow carousel-next" 
+                                    onClick={goToNextImage}
+                                    title="Next image"
+                                >
+                                    <i className="fas fa-chevron-right"></i>
+                                </button>
+                            </>
+                        )}
+                        
+                        {/* Image counter */}
+                        <div className="carousel-counter">
+                            {currentImageIndex + 1} / {property.imageUrls.length}
+                        </div>
+                        
+                        {/* Thumbnail strip */}
+                        {property.imageUrls.length > 1 && (
+                            <div className="carousel-thumbnails">
+                                {property.imageUrls.map((url, index) => (
+                                    <div 
+                                        key={index}
+                                        className={`carousel-thumbnail ${index === currentImageIndex ? 'active' : ''}`}
+                                        onClick={() => setCurrentImageIndex(index)}
+                                        title={`Go to image ${index + 1}`}
+                                    >
+                                        <img src={url} alt={`Thumbnail ${index + 1}`} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <ConfirmDialog {...confirmDialog} />
 
         </div> // End property-detail-container
