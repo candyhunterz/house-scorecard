@@ -69,9 +69,17 @@ def _get_or_create_browser():
         if _playwright_context:
             _playwright_context.close()
             
+        # Use more realistic context for realtor.ca
         _playwright_context = _playwright_browser.new_context(
-            viewport={'width': 800, 'height': 600},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            viewport={'width': 1366, 'height': 768},  # More common screen size
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            extra_http_headers={
+                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
         )
         
         return _playwright_context
@@ -197,20 +205,28 @@ def _scrape_with_playwright(url):
             'Cache-Control': 'max-age=0'
         })
         
-        # For realtor.ca, ultra-aggressive minimal approach - fail fast
-        if 'realtor.ca' in url.lower():
-            try:
-                logger.info("Quick homepage visit")
-                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=3000)
-                time.sleep(0.2)  # Minimal delay
-                logger.info("Homepage visit complete")
-                
-            except Exception as e:
-                logger.warning(f"Homepage visit failed: {e}")
+        # For realtor.ca, skip homepage entirely - direct to target
+        logger.info(f"Direct navigation to target URL (skipping homepage): {url}")
         
-        # Navigate to target URL with ultra-short timeout - fail fast to prevent worker death
-        logger.info(f"Navigating to target URL: {url}")
-        response = page.goto(url, wait_until='domcontentloaded', timeout=3000)
+        # Try different wait strategies for better success
+        wait_strategies = ['domcontentloaded', 'networkidle']
+        response = None
+        
+        for strategy in wait_strategies:
+            try:
+                logger.info(f"Trying wait strategy: {strategy}")
+                response = page.goto(url, wait_until=strategy, timeout=4000)
+                if response and response.status < 400:
+                    logger.info(f"Success with {strategy} strategy")
+                    break
+            except Exception as e:
+                logger.warning(f"Strategy {strategy} failed: {e}")
+                continue
+        
+        if not response:
+            # Final attempt with no wait
+            logger.info("Final attempt with no wait condition")
+            response = page.goto(url, timeout=4000)
         
         if not response:
             raise Exception("Failed to get response from page")
