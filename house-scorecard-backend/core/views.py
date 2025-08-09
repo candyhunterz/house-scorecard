@@ -2147,9 +2147,9 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 property_instance.ai_price_assessment = price_assessment[:10] if price_assessment else None
                 
                 buyer_recommendation = ai_analysis.get('buyer_recommendation', '')
-                if buyer_recommendation and len(buyer_recommendation) > 50:
-                    logger.warning(f"Buyer recommendation truncated from {len(buyer_recommendation)} to 50 chars: '{buyer_recommendation}' -> '{buyer_recommendation[:50]}'")
-                property_instance.ai_buyer_recommendation = buyer_recommendation[:50] if buyer_recommendation else None
+                if buyer_recommendation and len(buyer_recommendation) > 100:
+                    logger.warning(f"Buyer recommendation truncated from {len(buyer_recommendation)} to 100 chars: '{buyer_recommendation}' -> '{buyer_recommendation[:100]}'")
+                property_instance.ai_buyer_recommendation = buyer_recommendation[:100] if buyer_recommendation else None
                 
                 property_instance.ai_confidence_score = ai_analysis.get('confidence_score')
                 property_instance.ai_analysis_summary = ai_analysis.get('analysis_summary')

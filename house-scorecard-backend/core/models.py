@@ -35,7 +35,7 @@ class Property(models.Model):
     ai_red_flags = models.JSONField(default=list, blank=True, help_text="AI detected red flags")
     ai_positive_indicators = models.JSONField(default=list, blank=True, help_text="AI detected positive indicators")
     ai_price_assessment = models.CharField(max_length=10, blank=True, null=True, help_text="AI price assessment (fair/high/low)")
-    ai_buyer_recommendation = models.CharField(max_length=50, blank=True, null=True, help_text="AI buyer recommendation")
+    ai_buyer_recommendation = models.CharField(max_length=100, blank=True, null=True, help_text="AI buyer recommendation")
     ai_confidence_score = models.FloatField(blank=True, null=True, help_text="AI analysis confidence (0-1)")
     ai_analysis_summary = models.TextField(blank=True, help_text="AI analysis summary")
     ai_analysis_date = models.DateTimeField(blank=True, null=True, help_text="When AI analysis was performed")
