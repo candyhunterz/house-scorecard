@@ -161,6 +161,140 @@ def geocode_address(address):
         logger.error(f'Geocoding failed for address "{address}": {str(e)}')
         return None
 
+def _scrape_with_isolated_playwright(url):
+    """
+    Isolated Playwright scraping that creates a fresh browser instance for each request.
+    Used for problematic sites like realtor.ca to prevent state corruption.
+    """
+    if not PLAYWRIGHT_AVAILABLE:
+        raise Exception("Playwright not available - falling back to curl_cffi")
+    
+    logger.info(f"Starting isolated Playwright scraping for: {url}")
+    playwright_instance = None
+    browser = None
+    page = None
+    
+    try:
+        # Create completely fresh Playwright instance
+        playwright_instance = sync_playwright().start()
+        
+        # Set browser path
+        import os
+        if not os.environ.get('PLAYWRIGHT_BROWSERS_PATH'):
+            os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/opt/render/.cache/ms-playwright'
+        
+        # Launch fresh browser with memory-optimized settings
+        browser = playwright_instance.chromium.launch(
+            headless=True,
+            args=[
+                '--no-sandbox',
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-extensions',
+                '--disable-gpu',
+                '--disable-gl-drawing-for-tests',
+                '--disable-plugins',
+                '--disable-web-security',
+                '--disable-features=VizDisplayCompositor',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-ipc-flooding-protection',
+                '--max_old_space_size=128',
+                '--memory-pressure-off',
+                '--window-size=800,600'
+            ]
+        )
+        
+        # Create fresh context
+        context = browser.new_context(
+            viewport={'width': 1366, 'height': 768},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            extra_http_headers={
+                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+        )
+        
+        # Create new page
+        page = context.new_page()
+        
+        # Block memory-intensive resources
+        page.route("**/*.{png,jpg,jpeg,gif,svg,ico,webp,bmp,tiff}", lambda route: route.abort())
+        page.route("**/*.{css,scss,sass,less}", lambda route: route.abort())
+        page.route("**/*.{woff,woff2,ttf,otf,eot}", lambda route: route.abort())
+        page.route("**/analytics*", lambda route: route.abort())
+        page.route("**/gtag*", lambda route: route.abort())
+        page.route("**/facebook.com/tr*", lambda route: route.abort())
+        page.route("**/googleadservices.com*", lambda route: route.abort())
+        page.route("**/doubleclick.net*", lambda route: route.abort())
+        page.route("**/*.{mp4,mp3,wav,webm,avi,mov}", lambda route: route.abort())
+        
+        # Apply stealth mode
+        stealth = Stealth()
+        stealth.apply_stealth_sync(page)
+        
+        # Navigate directly to target (skip homepage for speed)
+        logger.info(f"Direct navigation to target URL: {url}")
+        
+        wait_strategies = ['domcontentloaded', 'networkidle']
+        response = None
+        
+        for strategy in wait_strategies:
+            try:
+                response = page.goto(url, wait_until=strategy, timeout=4000)
+                if response and response.status < 400:
+                    break
+            except Exception as e:
+                logger.warning(f"Strategy {strategy} failed: {e}")
+                continue
+        
+        if not response:
+            response = page.goto(url, timeout=4000)
+        
+        if not response:
+            raise Exception("Failed to get response from page")
+        
+        # Minimal wait and get content quickly
+        time.sleep(0.1)
+        content = page.content()
+        
+        if len(content) < 1000:
+            logger.warning(f"Very short content ({len(content)} chars) - likely blocked")
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Isolated Playwright scraping failed: {str(e)}")
+        raise e
+        
+    finally:
+        # Aggressive cleanup - close everything
+        try:
+            if page:
+                page.close()
+        except:
+            pass
+        try:
+            if context:
+                context.close()
+        except:
+            pass
+        try:
+            if browser:
+                browser.close()
+        except:
+            pass
+        try:
+            if playwright_instance:
+                playwright_instance.stop()
+        except:
+            pass
+        logger.debug("Isolated Playwright cleanup completed")
+
 def _scrape_with_playwright(url):
     """
     Memory-optimized Playwright scraping using reusable browser instance (expert recommendation)
@@ -885,10 +1019,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Strategy 1: Try ultra-fast Playwright with very short timeouts for realtor.ca
         if is_realtor_ca and PLAYWRIGHT_AVAILABLE:
             try:
-                logger.info("Attempting fast Playwright scraping for realtor.ca")
+                logger.info("Attempting isolated Playwright scraping for realtor.ca")
                 
-                # Use simple timeout approach instead of signals (signals can crash Django workers)
-                content = _scrape_with_playwright(url)
+                # For realtor.ca, use isolated browser to prevent state corruption
+                content = _scrape_with_isolated_playwright(url)
                 logger.info("Playwright scraping successful, parsing content")
                 
                 # Parse with BeautifulSoup using generic extraction methods
@@ -945,10 +1079,29 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 # Validate and sanitize all data before returning
                 result = self._sanitize_scraped_data(result)
                 
+                # Clean up browser state to prevent issues with subsequent requests
+                try:
+                    # Close only the current context, keep browser instance for reuse
+                    if '_playwright_context' in globals() and _playwright_context:
+                        _playwright_context.close()
+                        globals()['_playwright_context'] = None
+                    logger.debug("Playwright context cleaned up after successful scrape")
+                except Exception as cleanup_error:
+                    logger.warning(f"Error cleaning up Playwright context: {cleanup_error}")
+                
                 return result
                 
             except Exception as e:
                 logger.warning(f"Playwright scraping failed: {str(e)}")
+                logger.info("Cleaning up potentially corrupted Playwright instance and falling back to curl_cffi")
+                
+                # Force cleanup of potentially corrupted browser instance
+                try:
+                    _cleanup_browser()
+                    logger.info("Playwright browser cleanup completed")
+                except Exception as cleanup_error:
+                    logger.error(f"Error during Playwright cleanup: {cleanup_error}")
+                
                 logger.info("Falling back to curl_cffi method")
         
         # Strategy 2: Fall back to curl_cffi method
@@ -1986,8 +2139,18 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 property_instance.ai_overall_grade = ai_analysis.get('overall_grade')
                 property_instance.ai_red_flags = ai_analysis.get('red_flags', [])
                 property_instance.ai_positive_indicators = ai_analysis.get('positive_indicators', [])
-                property_instance.ai_price_assessment = ai_analysis.get('price_assessment')
-                property_instance.ai_buyer_recommendation = ai_analysis.get('buyer_recommendation')
+                
+                # Validate field lengths to prevent database errors
+                price_assessment = ai_analysis.get('price_assessment', '')
+                if price_assessment and len(price_assessment) > 10:
+                    logger.warning(f"Price assessment truncated from {len(price_assessment)} to 10 chars: '{price_assessment}' -> '{price_assessment[:10]}'")
+                property_instance.ai_price_assessment = price_assessment[:10] if price_assessment else None
+                
+                buyer_recommendation = ai_analysis.get('buyer_recommendation', '')
+                if buyer_recommendation and len(buyer_recommendation) > 50:
+                    logger.warning(f"Buyer recommendation truncated from {len(buyer_recommendation)} to 50 chars: '{buyer_recommendation}' -> '{buyer_recommendation[:50]}'")
+                property_instance.ai_buyer_recommendation = buyer_recommendation[:50] if buyer_recommendation else None
+                
                 property_instance.ai_confidence_score = ai_analysis.get('confidence_score')
                 property_instance.ai_analysis_summary = ai_analysis.get('analysis_summary')
                 property_instance.ai_analysis_date = timezone.now()
