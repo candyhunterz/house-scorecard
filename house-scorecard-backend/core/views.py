@@ -876,9 +876,52 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 content = _scrape_with_playwright(url)
                 logger.info("Playwright scraping successful, parsing content")
                 
-                # Parse with BeautifulSoup
+                # Parse with BeautifulSoup using generic extraction methods
                 soup = BeautifulSoup(content, 'html.parser')
-                result = self._parse_realtor_ca(soup, url)
+                
+                # Use generic parsing methods (same as fallback logic)
+                result = {}
+                try:
+                    result['images'] = self._extract_images(soup, url)
+                except Exception as e:
+                    logger.error(f"Error extracting images: {e}")
+                    result['images'] = []
+                    
+                try:
+                    result['address'] = self._extract_address(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting address: {e}")
+                    result['address'] = None
+                    
+                try:
+                    result['price'] = self._extract_price(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting price: {e}")
+                    result['price'] = None
+                    
+                try:
+                    result['beds'] = self._extract_beds(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting beds: {e}")
+                    result['beds'] = None
+                    
+                try:
+                    result['baths'] = self._extract_baths(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting baths: {e}")
+                    result['baths'] = None
+                    
+                try:
+                    result['sqft'] = self._extract_sqft(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting sqft: {e}")
+                    result['sqft'] = None
+                    
+                try:
+                    result['description'] = self._extract_description(soup)
+                except Exception as e:
+                    logger.error(f"Error extracting description: {e}")
+                    result['description'] = None
                 
                 # Apply image optimization if we found images
                 if result.get('images') and len(result['images']) > 0:

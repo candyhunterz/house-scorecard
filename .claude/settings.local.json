@@ -45,7 +45,8 @@
       "Bash(\"venv\\Scripts\\python.exe\" debug_test.py)",
       "Bash(pip freeze)",
       "Bash(node:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
