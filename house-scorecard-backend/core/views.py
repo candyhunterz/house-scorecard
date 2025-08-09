@@ -197,32 +197,29 @@ def _scrape_with_playwright(url):
             'Cache-Control': 'max-age=0'
         })
         
-        # For realtor.ca, ultra-fast minimal approach
+        # For realtor.ca, ultra-aggressive minimal approach - fail fast
         if 'realtor.ca' in url.lower():
             try:
                 logger.info("Quick homepage visit")
-                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=5000)
-                time.sleep(0.5)  # Minimal delay
+                page.goto('https://www.realtor.ca/', wait_until='domcontentloaded', timeout=3000)
+                time.sleep(0.2)  # Minimal delay
                 logger.info("Homepage visit complete")
                 
             except Exception as e:
                 logger.warning(f"Homepage visit failed: {e}")
         
-        # Navigate to target URL with very short timeout
+        # Navigate to target URL with ultra-short timeout - fail fast to prevent worker death
         logger.info(f"Navigating to target URL: {url}")
-        response = page.goto(url, wait_until='domcontentloaded', timeout=5000)
+        response = page.goto(url, wait_until='domcontentloaded', timeout=3000)
         
         if not response:
             raise Exception("Failed to get response from page")
         
-        # Ultra-minimal wait
-        time.sleep(0.3)
+        # Skip waits entirely for realtor.ca to prevent timeouts
+        time.sleep(0.1)
         
-        # Very short network idle wait or skip entirely
-        try:
-            page.wait_for_load_state('networkidle', timeout=2000)
-        except:
-            logger.info("Skipping network idle wait")
+        # Skip network idle entirely - too risky for memory
+        logger.info("Skipping network idle wait for memory efficiency")
         
         # Get page content
         content = page.content()
@@ -869,12 +866,27 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if is_zealty:
             return self._scrape_zealty(url, session or cf_requests.Session(impersonate="chrome120"))
         
-        # Strategy 1: Try Playwright first for sites with strong anti-bot protection
+        # Strategy 1: Try ultra-fast Playwright with very short timeouts for realtor.ca
         if is_realtor_ca and PLAYWRIGHT_AVAILABLE:
             try:
-                logger.info("Attempting Playwright scraping for realtor.ca (better anti-bot bypass)")
-                content = _scrape_with_playwright(url)
-                logger.info("Playwright scraping successful, parsing content")
+                logger.info("Attempting fast Playwright scraping for realtor.ca (15s max)")
+                
+                # Add hard timeout wrapper to prevent worker death
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise Exception("Playwright timeout exceeded - preventing worker death")
+                
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(15)  # 15 second hard limit
+                
+                try:
+                    content = _scrape_with_playwright(url)
+                    signal.alarm(0)  # Cancel alarm
+                    logger.info("Playwright scraping successful, parsing content")
+                except Exception as e:
+                    signal.alarm(0)  # Cancel alarm
+                    raise e
                 
                 # Parse with BeautifulSoup using generic extraction methods
                 soup = BeautifulSoup(content, 'html.parser')
