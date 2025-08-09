@@ -34,12 +34,13 @@ function LoginPage() {
         <div className="login-container">
             <h2>Login</h2>
             <form onSubmit={handleSubmit} className="login-form">
-                {error && <p className="error-message">{error}</p>}
+                {error && <p className="error-message" data-testid="login-error">{error}</p>}
                 <div className="form-group">
                     <label htmlFor="username">Username:</label>
                     <input
                         type="text"
                         id="username"
+                        data-testid="username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
@@ -50,12 +51,13 @@ function LoginPage() {
                     <input
                         type="password"
                         id="password"
+                        data-testid="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
                 </div>
-                <button type="submit" className="login-button" disabled={isLoading}>
+                <button type="submit" className="login-button" data-testid="login-btn" disabled={isLoading}>
                     {isLoading ? 'Logging in...' : 'Login'}
                 </button>
             </form>

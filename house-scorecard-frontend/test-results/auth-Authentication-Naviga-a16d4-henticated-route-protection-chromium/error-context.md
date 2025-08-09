@@ -1,0 +1,78 @@
+# Page snapshot
+
+```yaml
+- navigation:
+  - list:
+    - listitem:
+      - link " Dashboard":
+        - /url: /dashboard
+    - listitem:
+      - link " Properties":
+        - /url: /properties
+    - listitem:
+      - link " Compare":
+        - /url: /compare
+    - listitem:
+      - link " My Criteria":
+        - /url: /criteria
+    - listitem:
+      - link " Map":
+        - /url: /map
+  - link " Settings":
+    - /url: /settings
+  - button " Logout"
+- main:
+  - heading "Dashboard" [level=1]
+  - paragraph: Welcome to your House Scorecard dashboard
+  - heading "Quick Stats" [level=2]
+  - text: 
+  - heading "35" [level=3]
+  - paragraph: Total Properties
+  - text: 
+  - heading "37" [level=3]
+  - paragraph: Average Score
+  - text: 
+  - heading "4" [level=3]
+  - paragraph: Rated Properties
+  - text: 
+  - heading "3" [level=3]
+  - paragraph: Interested
+  - heading "Getting Started" [level=2]
+  - text: "1"
+  - heading "Set up your criteria" [level=3]
+  - paragraph: Define what matters most in your property search
+  - text:  Completed 2
+  - heading "Add properties" [level=3]
+  - paragraph: Start building your property list
+  - text:  35 properties added 3
+  - heading "Rate your properties" [level=3]
+  - paragraph: Score properties against your criteria
+  - button "Rate 31 properties"
+  - text: "4"
+  - heading "Compare and decide" [level=3]
+  - paragraph: Compare your top properties and make your choice
+  - button "Compare properties"
+  - heading "Quick Actions" [level=2]
+  - button "+ Add Property"
+  - button " Bulk Import"
+  - button " View All Properties"
+  - button " Compare Properties"
+  - button " Manage Criteria"
+  - heading "Top Scoring Properties" [level=2]
+  - heading "testing" [level=4]
+  - paragraph: 3 beds • 2.0 baths • 444.00
+  - text: "57"
+  - heading "hippo House" [level=4]
+  - paragraph: 3 beds • 2.0 baths • 44.00
+  - text: "40"
+  - heading "717 Jervis St Unit 3102, Vancouver, BC" [level=4]
+  - paragraph: 3 beds • 3.5 baths • 6999900.00
+  - text: "31"
+  - heading "Properties by Status" [level=2]
+  - text:  Unset 32  Interested 3
+  - heading "Insights & Recommendations" [level=2]
+  - text:  31 properties need rating
+  - button "Rate now"
+  - text:  You have 4 rated properties ready to compare
+  - button "Compare"
+```

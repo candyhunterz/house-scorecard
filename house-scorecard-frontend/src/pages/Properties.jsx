@@ -140,6 +140,7 @@ function Properties() {
               className="btn btn-primary btn-sm"
               onClick={handleAddPropertyClick}
               title="Add a single property"
+              data-testid="add-property-btn"
             >
               <i className="fas fa-plus"></i>
               Add Property

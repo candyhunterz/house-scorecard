@@ -342,19 +342,20 @@ function AddProperty() {
         {/* Address Input (Required) */}
         <div className="form-group">
           <label htmlFor="address">Address </label>
-          <input type="text" id="address" value={address} onChange={handleAddressChange} required aria-required="true"/>
+          <input type="text" id="address" value={address} onChange={handleAddressChange} required aria-required="true" data-testid="address"/>
         </div>
 
         {/* Listing URL Input (Optional) */}
         <div className="form-group">
           <label htmlFor="listingUrl">Listing URL</label>
           <div className="url-input-group">
-            <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.realtor.ca/... or https://zealty.ca/..."/>
+            <input type="url" id="listingUrl" value={listingUrl} onChange={handleListingUrlChange} placeholder="https://www.realtor.ca/... or https://zealty.ca/..." data-testid="listing-url"/>
             <button 
               type="button" 
               className="btn btn-auto-fill" 
               onClick={handleAutoFill}
               disabled={isAutoFilling || !listingUrl.trim()}
+              data-testid="auto-fill-btn"
             >
               {isAutoFilling ? 'Auto-Filling...' : '🔄 Auto-Fill'}
             </button>
@@ -364,46 +365,46 @@ function AddProperty() {
         </div>
 
         {/* AI Analysis Section */}
-        {canRunAnalysis && (
-          <div className="form-group ai-analysis-section">
-            <label>🤖 AI Property Analysis</label>
-            <div className="ai-analysis-controls">
-              <button 
-                type="button" 
-                className="btn btn-ai-analysis" 
-                onClick={handleRunAnalysis}
-                disabled={isAnalyzing || !address.trim() || !imageUrlsString.trim()}
-              >
-                {isAnalyzing ? 'Analyzing...' : '🧠 Run AI Analysis'}
-              </button>
-              <small className="ai-analysis-help">
-                Get AI insights about potential issues, property condition, and price assessment based on the property images.
-              </small>
-            </div>
-            {isAnalyzing && <small className="analysis-status">{analysisStatus}</small>}
+        <div className="form-group ai-analysis-section">
+          <label>🤖 AI Property Analysis</label>
+          <div className="ai-analysis-controls">
+            <button 
+              type="button" 
+              className="btn btn-ai-analysis" 
+              onClick={handleRunAnalysis}
+              disabled={isAnalyzing || !address.trim() || !imageUrlsString.trim()}
+              data-testid="run-ai-analysis"
+            >
+              {isAnalyzing ? 'Analyzing...' : '🧠 Run AI Analysis'}
+            </button>
+            <small className="ai-analysis-help">
+              Get AI insights about potential issues, property condition, and price assessment based on the property images.
+              {!canRunAnalysis && " (Fill address and add image URLs to enable)"}
+            </small>
           </div>
-        )}
+          {isAnalyzing && <small className="analysis-status">{analysisStatus}</small>}
+        </div>
 
         {/* Asking Price Input (Required, Number) */}
         <div className="form-group">
           <label htmlFor="price">Asking Price </label>
-          <input type="number" id="price" value={price} onChange={handlePriceChange} min="0" step="1" placeholder="e.g., 450000" required aria-required="true"/>
+          <input type="number" id="price" value={price} onChange={handlePriceChange} min="0" step="1" placeholder="e.g., 450000" required aria-required="true" data-testid="price"/>
         </div>
 
         {/* Beds, Baths, SqFt Inputs (Row Layout) */}
         <div className="form-row">
              <div className="form-group">
                 <label htmlFor="beds">Beds</label>
-                <input type="number" id="beds" value={beds} onChange={handleBedsChange} min="0" step="1"/>
+                <input type="number" id="beds" value={beds} onChange={handleBedsChange} min="0" step="1" data-testid="beds"/>
              </div>
              <div className="form-group">
                 <label htmlFor="baths">Baths</label>
                 {/* Allow decimals for baths */}
-                <input type="number" id="baths" value={baths} onChange={handleBathsChange} min="0" step="0.5"/>
+                <input type="number" id="baths" value={baths} onChange={handleBathsChange} min="0" step="0.5" data-testid="baths"/>
              </div>
              <div className="form-group">
                 <label htmlFor="sqft">SqFt</label>
-                <input type="number" id="sqft" value={sqft} onChange={handleSqftChange} min="0" step="1"/>
+                <input type="number" id="sqft" value={sqft} onChange={handleSqftChange} min="0" step="1" data-testid="sqft"/>
              </div>
         </div>
         {/* Optional Lat/Lon Inputs - Add later if needed */}
@@ -467,7 +468,7 @@ function AddProperty() {
 
         {/* Action Buttons (Submit and Cancel) */}
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">Save Property</button>
+          <button type="submit" className="btn btn-primary" data-testid="save-property-btn">Save Property</button>
           {/* Use type="button" for cancel to prevent accidental form submission */}
           <button type="button" className="btn btn-secondary" onClick={handleCancel}>Cancel</button>
         </div>

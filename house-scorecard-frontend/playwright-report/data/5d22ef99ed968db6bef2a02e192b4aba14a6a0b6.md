@@ -1,0 +1,70 @@
+# Page snapshot
+
+```yaml
+- navigation:
+  - list:
+    - listitem:
+      - link " Dashboard":
+        - /url: /dashboard
+    - listitem:
+      - link " Properties":
+        - /url: /properties
+    - listitem:
+      - link " Compare":
+        - /url: /compare
+    - listitem:
+      - link " My Criteria":
+        - /url: /criteria
+    - listitem:
+      - link " Map":
+        - /url: /map
+  - link " Settings":
+    - /url: /settings
+  - button " Logout"
+- main:
+  - heading "Add New Property" [level=1]
+  - paragraph: Enter the details of a property you visited.
+  - text: Address *
+  - textbox "Address *": "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"
+  - text: Listing URL
+  - textbox "Listing URL": https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+  - button "🔄 Auto-Fill"
+  - text: 📋 Paste a Realtor.ca, Redfin.ca, Zealty.ca, HouseSigma.com, or MLS listing URL above, then click Auto-Fill to extract property details automatically. 🤖 AI Property Analysis
+  - button "🧠 Run AI Analysis"
+  - text: Get AI insights about potential issues, property condition, and price assessment based on the property images. Asking Price *
+  - spinbutton "Asking Price *": "1075000"
+  - text: Beds
+  - spinbutton "Beds": "3"
+  - text: Baths
+  - spinbutton "Baths": "3"
+  - text: SqFt
+  - spinbutton "SqFt": "1807"
+  - text: Image URLs (Optional)
+  - textbox "Image URLs (Optional)": https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/83dcefb7.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/1ad5be0d.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/6dd28e9b.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/f3b61b38.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/84b12bae.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/1db87a14.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/6abf4a82.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/fa005713.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/8d076785.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/a15d25e1.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/d65a1577.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/4f5344cd.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/3854745b.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/a630e1f8.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/d137d16e.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/483e80d4.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/3f39b042.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/af86add3.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/d8819d45.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/8a707622.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/fd7746b4.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/647e170e.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/13792798.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/8d1db23b.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/fa1a82ad.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/6313d317.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/1414e381.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/84abfe10.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/f3acce86.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/936b4763.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/e46c77f5.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/7d65264f.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/a6216d9.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/9406837a.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/e301b3ec.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/7a08e256.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/d0fd2c0.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/9db0cf51.jpeg https://dvvjkgh94f2v6.cloudfront.net/8ab08887/263055704/dc2ad1a4.jpeg
+  - text: Paste image URLs (e.g., from Zillow, Redfin). Separate multiple URLs with a new line or a comma. Initial Notes / Red Flags
+  - textbox "Initial Notes / Red Flags": "Listing Description: Nestled in the tranquil area of Rosemary Heights, this exclusive complex comprises just 20 townhomes. The main level has an airy, open-concept design anchored by a bright chef’s kitchen, appointed with premium appliances, elegant quartz countertops and seamless access to a charming balcony that overlooks a lush, landscaped backyard. Upstairs, 3 spacious bdrms provide comfortable living, including a serene primary suite complete with a generous walk-in closet and a spa-inspired ensuite bath. The lower level features a multi-functional flex space that opens directly onto the expansive, fully fenced backyard—perfect for both entertaining and everyday living. Additional highlights include a side-by-side double garage, 2 car driveway and an unbeatable location, close to all desired amenities."
+  - heading "🤖 AI Analysis Preview" [level=3]
+  - heading "🤖 AI Property Analysis" [level=3]
+  - text: "Confidence: 86% Grade: B Price: fair"
+  - heading "📋 Summary" [level=4]
+  - paragraph: "Comprehensive analysis of 20 images across 4 batches. Identified 31 positive aspects. Overall assessment: B grade."
+  - heading "💡 Recommendation" [level=4]
+  - paragraph: good property with noted strengths
+  - heading "✅ Positive Features" [level=4]
+  - list:
+    - listitem: Clean and well-maintained appearance in all photos.
+    - listitem: Open-concept main living area.
+    - listitem: Balcony with seating and a grill, overlooking a landscaped backyard.
+    - listitem: Charming balcony overlooking a landscaped backyard
+    - listitem: Expansive, fully fenced backyard.
+    - listitem: Exclusive complex with only 20 townhomes
+    - listitem: Side-by-side double garage and a 2-car driveway.
+    - listitem: Primary suite appears to have a walk-in closet and an ensuite bathroom.
+    - listitem: Close to amenities
+    - listitem: Tranquil location in Rosemary Heights.
+  - text: 💡 AI analysis is based on available photos and listing information. Always verify findings with a professional inspection before making decisions.
+  - button "Save Property"
+  - button "Cancel"
+- text: "✅ 🤖 AI Analysis Complete! Grade: B - No major issues detected! You can now save the property."
+- button "Close notification": ×
+```

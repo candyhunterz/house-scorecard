@@ -35,6 +35,7 @@ function Sidebar({ isOpen, onClose }) {
               to="/dashboard"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={handleNavClick}
+              data-testid="nav-dashboard"
             >
               <i className="fas fa-chart-line"></i>
               <span>Dashboard</span>
@@ -45,6 +46,7 @@ function Sidebar({ isOpen, onClose }) {
               to="/properties"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={handleNavClick}
+              data-testid="nav-properties"
             >
               <i className="fas fa-list"></i>
               <span>Properties</span>
@@ -55,6 +57,7 @@ function Sidebar({ isOpen, onClose }) {
               to="/compare"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={handleNavClick}
+              data-testid="nav-comparison"
             >
               <i className="fas fa-balance-scale"></i>
               <span>Compare</span>
@@ -65,6 +68,7 @@ function Sidebar({ isOpen, onClose }) {
               to="/criteria"
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={handleNavClick}
+              data-testid="nav-criteria"
             >
               <i className="fas fa-list-check"></i>
               <span>My Criteria</span>
@@ -93,7 +97,7 @@ function Sidebar({ isOpen, onClose }) {
             <span>Settings</span>
           </NavLink>
           
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-btn" onClick={handleLogout} data-testid="logout-btn">
             <i className="fas fa-sign-out-alt"></i>
             <span>Logout</span>
           </button>

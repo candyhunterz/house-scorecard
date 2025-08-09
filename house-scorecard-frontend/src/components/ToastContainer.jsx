@@ -31,7 +31,7 @@ const Toast = ({ toast, onClose }) => {
   };
 
   return (
-    <div className={`toast toast--${toast.type}`}>
+    <div className={`toast toast--${toast.type}`} data-testid={`${toast.type}-notification`}>
       <div className="toast__content">
         <span className="toast__icon">{getIcon(toast.type)}</span>
         <span className="toast__message">{toast.message}</span>

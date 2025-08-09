@@ -86,7 +86,7 @@ function AppLayout() {
       {/* Mobile Header */}
       <header className="mobile-header">
         <h1>House Scorecard</h1>
-        <button className="mobile-menu-toggle" onClick={toggleSidebar}>
+        <button className="mobile-menu-toggle" onClick={toggleSidebar} data-testid="user-menu">
           <i className="fas fa-bars"></i>
         </button>
       </header>

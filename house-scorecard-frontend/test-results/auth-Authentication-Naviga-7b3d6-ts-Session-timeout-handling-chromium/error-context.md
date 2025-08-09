@@ -1,0 +1,400 @@
+# Page snapshot
+
+```yaml
+- navigation:
+  - list:
+    - listitem:
+      - link " Dashboard":
+        - /url: /dashboard
+    - listitem:
+      - link " Properties":
+        - /url: /properties
+    - listitem:
+      - link " Compare":
+        - /url: /compare
+    - listitem:
+      - link " My Criteria":
+        - /url: /criteria
+    - listitem:
+      - link " Map":
+        - /url: /map
+  - link " Settings":
+    - /url: /settings
+  - button " Logout"
+- main:
+  - heading "My Properties" [level=1]
+  - button " Bulk Import"
+  - button "+ Add Property"
+  - text: 
+  - textbox "Search by address, notes, or location..."
+  - button " Status (0) "
+  - button " Filters"
+  - combobox:
+    - 'option "Score: High → Low" [selected]'
+    - 'option "Score: Low → High"'
+    - 'option "Price: Low → High"'
+    - 'option "Price: High → Low"'
+    - 'option "Address: A → Z"'
+    - 'option "Address: Z → A"'
+  - text: 36 properties
+  - button "Thumbnail of testing testing View Listing $444  3 Beds  2.0 Baths  1362 sqft 57  OK  Interested":
+    - img "Thumbnail of testing"
+    - heading "testing" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.realtor.ca/real-estate/28695300/4605-fraser-street-vancouver
+    - paragraph: $444
+    - text:  3 Beds  2.0 Baths  1362 sqft 57
+    - paragraph:  OK
+    - text:  Interested
+  - button " hippo House View Listing $44  3 Beds  2.0 Baths 40  OK  Set Status":
+    - text: 
+    - heading "hippo House" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.reddit.com/r/masseffect/comments/tj3u2j/what_are_you_thoughts_on_project_overlord/
+    - paragraph: $44
+    - text:  3 Beds  2.0 Baths 40
+    - paragraph:  OK
+    - text:  Set Status
+  - button "Thumbnail of 717 Jervis St Unit 3102, Vancouver, BC 717 Jervis St Unit 3102, Vancouver, BC View Listing $6,999,900  3 Beds  3.5 Baths  4348 sqft 31  OK  Set Status":
+    - img "Thumbnail of 717 Jervis St Unit 3102, Vancouver, BC"
+    - heading "717 Jervis St Unit 3102, Vancouver, BC" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/717-Jervis-St-V6E-4L5/unit-3102/home/155108033
+    - paragraph: $6,999,900
+    - text:  3 Beds  3.5 Baths  4348 sqft 31
+    - paragraph:  OK
+    - text:  Set Status
+  - button " test property View Listing $4,422,424  2 Beds  1.0 Baths 20  OK  Interested":
+    - text: 
+    - heading "test property" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.reddit.com/r/masseffect/comments/tj3u2j/what_are_you_thoughts_on_project_overlord/
+    - paragraph: $4,422,424
+    - text:  2 Beds  1.0 Baths 20
+    - paragraph:  OK
+    - text:  Interested
+  - button " hola View Listing $2  3 Beds  1.0 Baths 0  Check Issues  Set Status":
+    - text: 
+    - heading "hola" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.reddit.com/r/masseffect/comments/tj3u2j/what_are_you_thoughts_on_project_overlord/
+    - paragraph: $2
+    - text:  3 Beds  1.0 Baths 0
+    - paragraph:  Check Issues
+    - text:  Set Status
+  - button " testing View Listing $3,424,214  3 Beds  3.0 Baths 0  Check Issues  Set Status":
+    - text: 
+    - heading "testing" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.reddit.com/r/masseffect/comments/tj3u2j/what_are_you_thoughts_on_project_overlord/
+    - paragraph: $3,424,214
+    - text:  3 Beds  3.0 Baths 0
+    - paragraph:  Check Issues
+    - text:  Set Status
+  - button " testing View Listing $123,213  22 Beds  3.0 Baths 0  Check Issues  Set Status":
+    - text: 
+    - heading "testing" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.reddit.com/r/masseffect/comments/tj3u2j/what_are_you_thoughts_on_project_overlord/
+    - paragraph: $123,213
+    - text:  22 Beds  3.0 Baths 0
+    - paragraph:  Check Issues
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #98 15677 28 AVENUE, Surrey #98 15677 28 AVENUE, Surrey View Listing $1,049,900  4 Beds  4.0 Baths  2059 sqft --  Not Rated  Interested"':
+    - 'img "Thumbnail of #98 15677 28 AVENUE, Surrey"'
+    - heading "#98 15677 28 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034156/98-15677-28-AVENUE-Surrey-BC/
+    - paragraph: $1,049,900
+    - text:  4 Beds  4.0 Baths  2059 sqft --
+    - paragraph:  Not Rated
+    - text:  Interested
+  - 'button "Thumbnail of #53 2450 161A STREET, Surrey #53 2450 161A STREET, Surrey View Listing $867,000  3 Beds  2.0 Baths  1520 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #53 2450 161A STREET, Surrey"'
+    - heading "#53 2450 161A STREET, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3031603/53-2450-161A-STREET-Surrey-BC/
+    - paragraph: $867,000
+    - text:  3 Beds  2.0 Baths  1520 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #53 2450 161A STREET, Surrey #53 2450 161A STREET, Surrey View Listing $867,000  3 Beds  2.0 Baths  1520 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #53 2450 161A STREET, Surrey"'
+    - heading "#53 2450 161A STREET, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3031603/53-2450-161A-STREET-Surrey-BC/
+    - paragraph: $867,000
+    - text:  3 Beds  2.0 Baths  1520 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #98 15677 28 AVENUE, Surrey #98 15677 28 AVENUE, Surrey View Listing $1,049,900  4 Beds  4.0 Baths  2059 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #98 15677 28 AVENUE, Surrey"'
+    - heading "#98 15677 28 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034156/98-15677-28-AVENUE-Surrey-BC/
+    - paragraph: $1,049,900
+    - text:  4 Beds  4.0 Baths  2059 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey"'
+    - heading "#18 3303 ROSEMARY HEIGHTS CRESCENT, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034077/18-3303-ROSEMARY-HEIGHTS-CRESCENT-Surrey-BC/
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 618 W 6th Ave #11, Vancouver, BC 618 W 6th Ave #11, Vancouver, BC View Listing $599,900  1 Beds  1.0 Baths  545 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 618 W 6th Ave #11, Vancouver, BC"'
+    - 'heading "618 W 6th Ave #11, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/618-W-6th-Ave-V5Z-1A3/unit-11/home/156695856
+    - paragraph: $599,900
+    - text:  1 Beds  1.0 Baths  545 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #35 15828 27 AVENUE, Surrey #35 15828 27 AVENUE, Surrey View Listing $999,999  4 Beds  4.0 Baths  1723 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #35 15828 27 AVENUE, Surrey"'
+    - heading "#35 15828 27 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034386/35-15828-27-AVENUE-Surrey-BC/
+    - paragraph: $999,999
+    - text:  4 Beds  4.0 Baths  1723 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 16511 21 AVENUE, Surrey 16511 21 AVENUE, Surrey View Listing $1,340,000  5 Beds  4.0 Baths  2079 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 16511 21 AVENUE, Surrey"
+    - heading "16511 21 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034457/16511-21-AVENUE-Surrey-BC/
+    - paragraph: $1,340,000
+    - text:  5 Beds  4.0 Baths  2079 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 16454 25 AVENUE, Surrey 16454 25 AVENUE, Surrey View Listing $1,340,800  4 Beds  4.0 Baths  2318 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 16454 25 AVENUE, Surrey"
+    - heading "16454 25 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3022092/16454-25-AVENUE-Surrey-BC/
+    - paragraph: $1,340,800
+    - text:  4 Beds  4.0 Baths  2318 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #137 2853 HELC PLACE, Surrey #137 2853 HELC PLACE, Surrey View Listing $1,299,000  4 Beds  4.0 Baths  2707 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #137 2853 HELC PLACE, Surrey"'
+    - heading "#137 2853 HELC PLACE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3025032/137-2853-HELC-PLACE-Surrey-BC/
+    - paragraph: $1,299,000
+    - text:  4 Beds  4.0 Baths  2707 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #106 15550 26 AVENUE, Surrey #106 15550 26 AVENUE, Surrey View Listing $879,900  3 Beds  3.0 Baths  1745 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #106 15550 26 AVENUE, Surrey"'
+    - heading "#106 15550 26 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034694/106-15550-26-AVENUE-Surrey-BC/
+    - paragraph: $879,900
+    - text:  3 Beds  3.0 Baths  1745 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #107 15436 31 AVENUE, Surrey #107 15436 31 AVENUE, Surrey View Listing $738,000  2 Beds  2.0 Baths  988 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #107 15436 31 AVENUE, Surrey"'
+    - heading "#107 15436 31 AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034133/107-15436-31-AVENUE-Surrey-BC/
+    - paragraph: $738,000
+    - text:  2 Beds  2.0 Baths  988 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of #210 15150 29A AVENUE, Surrey #210 15150 29A AVENUE, Surrey View Listing $738,800  2 Beds  2.0 Baths  1182 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of #210 15150 29A AVENUE, Surrey"'
+    - heading "#210 15150 29A AVENUE, Surrey" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.zealty.ca/mls-R3034722/210-15150-29A-AVENUE-Surrey-BC/
+    - paragraph: $738,800
+    - text:  2 Beds  2.0 Baths  1182 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 5189 Gaston St #905, Vancouver, BC 5189 Gaston St #905, Vancouver, BC View Listing $649,000  2 Beds  2.0 Baths  758 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 5189 Gaston St #905, Vancouver, BC"'
+    - 'heading "5189 Gaston St #905, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/5189-Gaston-St-V5R-6C7/unit-905/home/154696419
+    - paragraph: $649,000
+    - text:  2 Beds  2.0 Baths  758 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 1480 Howe St Ph 1, Vancouver, BC 1480 Howe St Ph 1, Vancouver, BC View Listing $7,900,000  2 Beds  2.5 Baths  2683 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 1480 Howe St Ph 1, Vancouver, BC"
+    - heading "1480 Howe St Ph 1, Vancouver, BC" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/1480-Howe-St-V6Z-1C4/unit-1/home/169453330
+    - paragraph: $7,900,000
+    - text:  2 Beds  2.5 Baths  2683 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 89 Nelson St Unit 2307, Vancouver, BC 89 Nelson St Unit 2307, Vancouver, BC View Listing $675,000  1 Beds  1.0 Baths  500 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 89 Nelson St Unit 2307, Vancouver, BC"
+    - heading "89 Nelson St Unit 2307, Vancouver, BC" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/89-Nelson-St-V6Z-0E7/unit-2307/home/181559804
+    - paragraph: $675,000
+    - text:  1 Beds  1.0 Baths  500 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 1621 E 11th Ave #1, Vancouver, BC 1621 E 11th Ave #1, Vancouver, BC View Listing $1,998,000  3 Beds  4.0 Baths  1693 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 1621 E 11th Ave #1, Vancouver, BC"'
+    - 'heading "1621 E 11th Ave #1, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/1621-E-11th-Ave-V5N-1Y8/unit-1/home/176486597
+    - paragraph: $1,998,000
+    - text:  3 Beds  4.0 Baths  1693 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 4085 SW Marine Dr, Vancouver, BC 4085 SW Marine Dr, Vancouver, BC View Listing $4,200,000  6 Beds  6.0 Baths  4639 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 4085 SW Marine Dr, Vancouver, BC"
+    - heading "4085 SW Marine Dr, Vancouver, BC" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/717-Jervis-St-V6E-4L5/unit-3101/home/155137213
+    - paragraph: $4,200,000
+    - text:  6 Beds  6.0 Baths  4639 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 717 Jervis St #3101, Vancouver, BC 717 Jervis St #3101, Vancouver, BC View Listing $11,499,900  5 Beds  7.5 Baths  9186 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 717 Jervis St #3101, Vancouver, BC"'
+    - 'heading "717 Jervis St #3101, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/717-Jervis-St-V6E-4L5/unit-3101/home/155137213
+    - paragraph: $11,499,900
+    - text:  5 Beds  7.5 Baths  9186 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 18 3303 ROSEMARY HEIGHTS CRESCENTSurrey, British Columbia V3Z0K7 18 3303 ROSEMARY HEIGHTS CRESCENTSurrey, British Columbia V3Z0K7 View Listing $1,075,000  3 Beds  3.0 Baths  1807 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 18 3303 ROSEMARY HEIGHTS CRESCENTSurrey, British Columbia V3Z0K7"
+    - heading "18 3303 ROSEMARY HEIGHTS CRESCENTSurrey, British Columbia V3Z0K7" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.realtor.ca/real-estate/28695130/18-3303-rosemary-heights-crescent-surrey
+    - paragraph: $1,075,000
+    - text:  3 Beds  3.0 Baths  1807 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 1708 Ontario St Unit 805, Vancouver, BC 1708 Ontario St Unit 805, Vancouver, BC View Listing $719,000  1 Beds  1.0 Baths  600 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 1708 Ontario St Unit 805, Vancouver, BC"
+    - heading "1708 Ontario St Unit 805, Vancouver, BC" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/1708-Ontario-St-V5T-1A1/unit-805/home/181544312
+    - paragraph: $719,000
+    - text:  1 Beds  1.0 Baths  600 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 1771 Nelson St #603, Vancouver, BC 1771 Nelson St #603, Vancouver, BC View Listing $834,900  2 Beds  2.0 Baths  905 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 1771 Nelson St #603, Vancouver, BC"'
+    - 'heading "1771 Nelson St #603, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/1771-Nelson-St-V6G-1M6/unit-603/home/155282061
+    - paragraph: $834,900
+    - text:  2 Beds  2.0 Baths  905 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - 'button "Thumbnail of 610 Granville St #606, Vancouver, BC 610 Granville St #606, Vancouver, BC View Listing $779,000  1 Beds  1.5 Baths  867 sqft --  Not Rated  Set Status"':
+    - 'img "Thumbnail of 610 Granville St #606, Vancouver, BC"'
+    - 'heading "610 Granville St #606, Vancouver, BC" [level=2]'
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.redfin.ca/bc/vancouver/610-Granville-St-V6C-3T3/unit-606/home/155786254
+    - paragraph: $779,000
+    - text:  1 Beds  1.5 Baths  867 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+  - button "Thumbnail of 486 E KING EDWARD AVENUEVancouver, British Columbia V5V2C8 486 E KING EDWARD AVENUEVancouver, British Columbia V5V2C8 View Listing $1,599,000  6 Beds  2.0 Baths  3360 sqft --  Not Rated  Set Status":
+    - img "Thumbnail of 486 E KING EDWARD AVENUEVancouver, British Columbia V5V2C8"
+    - heading "486 E KING EDWARD AVENUEVancouver, British Columbia V5V2C8" [level=2]
+    - paragraph:
+      - link "View Listing":
+        - /url: https://www.realtor.ca/real-estate/28196641/486-e-king-edward-avenue-vancouver
+    - paragraph: $1,599,000
+    - text:  6 Beds  2.0 Baths  3360 sqft --
+    - paragraph:  Not Rated
+    - text:  Set Status
+```

@@ -60,11 +60,11 @@ function AIInsights({ property }) {
   };
 
   return (
-    <div className="ai-insights-section">
+    <div className="ai-insights-section" data-testid="analysis-complete">
       <div className="ai-insights-header">
         <h3>🤖 AI Property Analysis</h3>
         {aiConfidenceScore && (
-          <div className="confidence-badge">
+          <div className="confidence-badge" data-testid="ai-confidence">
             Confidence: {formatConfidence(aiConfidenceScore)}
           </div>
         )}
@@ -73,11 +73,11 @@ function AIInsights({ property }) {
       {/* Overall Grade */}
       {aiOverallGrade && (
         <div className="ai-grade-section">
-          <div className={`ai-grade-badge ${getGradeClass(aiOverallGrade)}`}>
+          <div className={`ai-grade-badge ${getGradeClass(aiOverallGrade)}`} data-testid="ai-grade">
             Grade: {aiOverallGrade}
           </div>
           {aiPriceAssessment && (
-            <div className={`price-assessment ${getAssessmentClass(aiPriceAssessment)}`}>
+            <div className={`price-assessment ${getAssessmentClass(aiPriceAssessment)}`} data-testid="price-assessment">
               Price: {aiPriceAssessment}
             </div>
           )}

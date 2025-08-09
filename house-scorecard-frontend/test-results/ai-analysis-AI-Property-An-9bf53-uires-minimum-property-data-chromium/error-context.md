@@ -1,0 +1,48 @@
+# Page snapshot
+
+```yaml
+- navigation:
+  - list:
+    - listitem:
+      - link " Dashboard":
+        - /url: /dashboard
+    - listitem:
+      - link " Properties":
+        - /url: /properties
+    - listitem:
+      - link " Compare":
+        - /url: /compare
+    - listitem:
+      - link " My Criteria":
+        - /url: /criteria
+    - listitem:
+      - link " Map":
+        - /url: /map
+  - link " Settings":
+    - /url: /settings
+  - button " Logout"
+- main:
+  - heading "Add New Property" [level=1]
+  - paragraph: Enter the details of a property you visited.
+  - text: Address *
+  - textbox "Address *"
+  - text: Listing URL
+  - textbox "Listing URL"
+  - button "🔄 Auto-Fill" [disabled]
+  - text: 📋 Paste a Realtor.ca, Redfin.ca, Zealty.ca, HouseSigma.com, or MLS listing URL above, then click Auto-Fill to extract property details automatically. 🤖 AI Property Analysis
+  - button "🧠 Run AI Analysis" [disabled]
+  - text: Get AI insights about potential issues, property condition, and price assessment based on the property images. (Fill address and add image URLs to enable) Asking Price *
+  - spinbutton "Asking Price *"
+  - text: Beds
+  - spinbutton "Beds"
+  - text: Baths
+  - spinbutton "Baths"
+  - text: SqFt
+  - spinbutton "SqFt"
+  - text: Image URLs (Optional)
+  - textbox "Image URLs (Optional)"
+  - text: Paste image URLs (e.g., from Zillow, Redfin). Separate multiple URLs with a new line or a comma. Initial Notes / Red Flags
+  - textbox "Initial Notes / Red Flags"
+  - button "Save Property"
+  - button "Cancel"
+```
