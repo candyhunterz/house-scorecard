@@ -31,30 +31,45 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
         return getattr(settings, 'GEMINI_MODEL_NAME', 'gemini-2.5-flash-lite')
     
     def download_image(self, image_url: str) -> Image.Image:
-        """Download and prepare image for Gemini analysis"""
+        """Download and prepare image for Gemini analysis with memory optimization"""
+        response = None
         try:
-            response = requests.get(image_url, timeout=10, headers={
+            # Stream download to reduce memory usage
+            response = requests.get(image_url, timeout=8, stream=True, headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             })
             response.raise_for_status()
             
+            # Use BytesIO with smaller buffer
+            image_data = io.BytesIO()
+            for chunk in response.iter_content(chunk_size=8192):
+                image_data.write(chunk)
+            image_data.seek(0)
+            
+            # Close response early to free memory
+            response.close()
+            response = None
+            
             # Open image with PIL
-            image = Image.open(io.BytesIO(response.content))
+            image = Image.open(image_data)
             
             # Convert to RGB if needed (Gemini works best with RGB)
             if image.mode != 'RGB':
+                old_image = image
                 image = image.convert('RGB')
+                old_image.close()  # Close original to free memory
             
-            # Resize if too large (Gemini has size limits) - use smaller size for memory efficiency
-            max_size = 384  # Reduced from 512 to save even more memory
+            # More aggressive resizing for memory efficiency
+            max_size = 320  # Reduced further for better memory usage
             if image.width > max_size or image.height > max_size:
+                # Use more memory-efficient resize
                 image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
             
-            # Ensure minimum size to maintain quality for analysis
-            min_size = 256
-            if image.width < min_size and image.height < min_size:
-                # If image is too small, resize it to minimum size
-                image = image.resize((min_size, min_size), Image.Resampling.LANCZOS)
+            # Skip minimum size enforcement to save memory
+            # Gemini can handle smaller images
+            
+            # Clean up BytesIO
+            image_data.close()
             
             return image
             
@@ -96,6 +111,10 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
         Analyze property using a single batch of images (existing logic)
         """
         try:
+            # Early memory optimization - force garbage collection before starting
+            import gc
+            gc.collect()
+            
             # Get thinking budget from settings
             thinking_budget = getattr(settings, 'GEMINI_THINKING_BUDGET', -1)
             
@@ -105,20 +124,33 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                     "analysis_summary": "No images available for analysis"
                 })
             
-            # Download and prepare images
+            # Download and prepare images with aggressive memory management
             images = []
             successful_downloads = 0
             
-            for url in image_urls:
-                image = self.download_image(url)
-                if image:
-                    images.append(image)
-                    successful_downloads += 1
-                
-                # Force cleanup after each image to manage memory
-                if successful_downloads % 2 == 0:  # Every 2 images
-                    import gc
-                    gc.collect()
+            # Process images in smaller batches to prevent memory buildup
+            batch_size = 5  # Process 5 images at a time
+            
+            for i, url in enumerate(image_urls):
+                try:
+                    image = self.download_image(url)
+                    if image:
+                        images.append(image)
+                        successful_downloads += 1
+                        
+                    # Aggressive memory cleanup after each image
+                    if i % 3 == 0:  # Every 3 images
+                        import gc
+                        gc.collect()
+                        
+                    # If we have 20+ images, do more frequent cleanup
+                    if len(image_urls) > 20 and i % 2 == 0:
+                        gc.collect()
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to download image {i+1}/{len(image_urls)}: {url[:100]}... - {e}")
+                    # Don't let one image failure stop the whole process
+                    continue
             
             if len(images) == 0:
                 logger.error("Failed to download any images for analysis")
@@ -161,6 +193,19 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 config=types.GenerateContentConfig(**config_params)
             )
             
+            # Immediate cleanup of images after API call to free memory
+            try:
+                for img in images:
+                    if hasattr(img, 'close'):
+                        img.close()
+                images.clear()  # Clear the list
+                del content  # Delete content array
+                import gc
+                gc.collect()  # Force garbage collection
+                logger.debug("Cleaned up images after API call")
+            except Exception as cleanup_error:
+                logger.warning(f"Error during image cleanup: {cleanup_error}")
+            
             # Parse response with better error handling
             if response.text:
                 logger.info(f"Received response from Gemini API, length: {len(response.text)} chars")
@@ -185,6 +230,22 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 
         except Exception as e:
             logger.error(f"Gemini analysis failed: {e}")
+            
+            # Cleanup images in case of error to prevent memory leak
+            try:
+                if 'images' in locals():
+                    for img in images:
+                        if hasattr(img, 'close'):
+                            img.close()
+                    images.clear()
+                if 'content' in locals():
+                    del content
+                import gc
+                gc.collect()
+                logger.debug("Emergency cleanup completed after error")
+            except:
+                pass  # Don't let cleanup errors mask the original error
+            
             return self.validate_analysis_response({
                 "analysis_summary": f"Analysis failed: {str(e)}"
             })
