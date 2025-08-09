@@ -7,6 +7,10 @@ from PIL import Image
 import io
 import logging
 from django.conf import settings
+import psutil
+import os
+import tempfile
+from pathlib import Path
 from .base_ai_analyzer import BaseAIAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -30,8 +34,8 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
         """Return Gemini model name"""
         return getattr(settings, 'GEMINI_MODEL_NAME', 'gemini-2.5-flash-lite')
     
-    def download_image(self, image_url: str) -> Image.Image:
-        """Download and prepare image for Gemini analysis with memory optimization"""
+    def download_and_compress_image(self, image_url: str, temp_dir: str = None) -> str:
+        """Download, process, and save image as compressed JPEG to reduce memory usage"""
         response = None
         try:
             # Stream download to reduce memory usage
@@ -59,23 +63,37 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                 image = image.convert('RGB')
                 old_image.close()  # Close original to free memory
             
-            # More aggressive resizing for memory efficiency
-            max_size = 320  # Reduced further for better memory usage
+            # Balanced resizing for memory efficiency while maintaining effectiveness
+            max_size = 280  # Compromise between memory usage and Gemini effectiveness
             if image.width > max_size or image.height > max_size:
                 # Use more memory-efficient resize
                 image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
             
-            # Skip minimum size enforcement to save memory
-            # Gemini can handle smaller images
-            
-            # Clean up BytesIO
+            # Clean up BytesIO early
             image_data.close()
             
-            return image
+            # Save as compressed JPEG to temporary file to reduce memory usage
+            temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False, dir=temp_dir)
+            temp_path = temp_file.name
+            temp_file.close()
+            
+            # Save with aggressive JPEG compression for memory efficiency
+            image.save(temp_path, 'JPEG', quality=85, optimize=True)
+            
+            # Close PIL image to free memory immediately
+            image.close()
+            
+            return temp_path
             
         except Exception as e:
             logger.error(f"Failed to download image from {image_url}: {e}")
             return None
+        finally:
+            if response:
+                try:
+                    response.close()
+                except:
+                    pass
     
     def analyze_property_comprehensive(self, property_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -85,12 +103,12 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             image_urls = property_data.get('imageUrls', [])
             
             # Process ALL images in batches for comprehensive analysis
-            max_images_per_batch = getattr(settings, 'AI_MAX_IMAGES_PER_ANALYSIS', 2)  # Reduced from 3 to 2
+            max_images_per_batch = getattr(settings, 'AI_MAX_IMAGES_PER_ANALYSIS', 1)  # Reduced to 1 for memory
             
             # Limit total images processed to prevent memory issues
-            if len(image_urls) > 20:
-                logger.warning(f"Too many images ({len(image_urls)}), limiting to first 15")
-                image_urls = image_urls[:20]
+            if len(image_urls) > 30:
+                logger.warning(f"Too many images ({len(image_urls)}), limiting to first 30")
+                image_urls = image_urls[:30]
             
             if len(image_urls) <= max_images_per_batch:
                 # Single batch - use existing logic
@@ -115,6 +133,11 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             import gc
             gc.collect()
             
+            # Log initial memory usage
+            process = psutil.Process(os.getpid())
+            initial_memory = process.memory_info().rss / 1024 / 1024
+            logger.info(f"Starting analysis with {initial_memory:.1f}MB memory usage")
+            
             # Get thinking budget from settings
             thinking_budget = getattr(settings, 'GEMINI_THINKING_BUDGET', -1)
             
@@ -124,109 +147,130 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
                     "analysis_summary": "No images available for analysis"
                 })
             
-            # Download and prepare images with aggressive memory management
-            images = []
+            # Create temporary directory for compressed images
+            temp_dir = tempfile.mkdtemp(prefix='gemini_images_')
+            temp_image_paths = []
             successful_downloads = 0
             
-            # Process images in smaller batches to prevent memory buildup
-            batch_size = 5  # Process 5 images at a time
-            
-            for i, url in enumerate(image_urls):
-                try:
-                    image = self.download_image(url)
-                    if image:
-                        images.append(image)
-                        successful_downloads += 1
-                        
-                    # Aggressive memory cleanup after each image
-                    if i % 3 == 0:  # Every 3 images
-                        import gc
-                        gc.collect()
-                        
-                    # If we have 20+ images, do more frequent cleanup
-                    if len(image_urls) > 20 and i % 2 == 0:
-                        gc.collect()
-                        
-                except Exception as e:
-                    logger.warning(f"Failed to download image {i+1}/{len(image_urls)}: {url[:100]}... - {e}")
-                    # Don't let one image failure stop the whole process
-                    continue
-            
-            if len(images) == 0:
-                logger.error("Failed to download any images for analysis")
-                return self.validate_analysis_response({
-                    "analysis_summary": "Could not download images for analysis"
-                })
-            elif len(images) < len(image_urls) * 0.5:  # If more than 50% failed to download
-                logger.warning(f"Only downloaded {len(images)}/{len(image_urls)} images successfully")
-                # Continue with analysis but note the issue
-            
-            # Generate comprehensive prompt
-            prompt = self.format_property_prompt(property_data)
-            
-            # Prepare content for Gemini (text + images)
-            content = [prompt] + images
-            
-            # Make API call to Gemini with configurable thinking
-            logger.info(f"Analyzing property with {len(images)} images using {self.model_name} (thinking_budget={thinking_budget})")
-            
-            # Create generation config with thinking if enabled
-            config_params = {
-                'temperature': 0.1,  # Low temperature for consistent analysis
-                'top_p': 0.8,
-                'top_k': 40,
-                'max_output_tokens': 1000,
-            }
-            
-            # Add thinking config if enabled
-            if thinking_budget != 0:
-                if thinking_budget == -1:
-                    # Dynamic thinking - let model decide
-                    config_params['thinking_config'] = types.ThinkingConfig()
-                else:
-                    # Fixed thinking budget
-                    config_params['thinking_config'] = types.ThinkingConfig(steps=thinking_budget)
-            
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=content,
-                config=types.GenerateContentConfig(**config_params)
-            )
-            
-            # Immediate cleanup of images after API call to free memory
             try:
-                for img in images:
-                    if hasattr(img, 'close'):
-                        img.close()
-                images.clear()  # Clear the list
-                del content  # Delete content array
-                import gc
-                gc.collect()  # Force garbage collection
-                logger.debug("Cleaned up images after API call")
-            except Exception as cleanup_error:
-                logger.warning(f"Error during image cleanup: {cleanup_error}")
+                # Download and compress images to temporary files (streaming approach)
+                for i, url in enumerate(image_urls):
+                    try:
+                        temp_path = self.download_and_compress_image(url, temp_dir)
+                        if temp_path:
+                            temp_image_paths.append(temp_path)
+                            successful_downloads += 1
+                            
+                            # Log memory after each image (should be much lower now)
+                            current_memory = process.memory_info().rss / 1024 / 1024
+                            logger.info(f"After image {i+1}: {current_memory:.1f}MB memory usage")
+                            
+                        # Light cleanup after each download
+                        if i % 3 == 0:
+                            import gc
+                            gc.collect()
+                            
+                    except Exception as e:
+                        logger.warning(f"Failed to download image {i+1}/{len(image_urls)}: {url[:100]}... - {e}")
+                        continue
             
-            # Parse response with better error handling
-            if response.text:
-                logger.info(f"Received response from Gemini API, length: {len(response.text)} chars")
-                
-                # Log first 200 chars to debug HTML/JSON issues
-                preview = response.text[:200].replace('\n', ' ')
-                logger.info(f"Response preview: {preview}")
-                
-                # Check if response looks like HTML (error page)
-                if response.text.strip().startswith('<!doctype') or response.text.strip().startswith('<html'):
-                    logger.error(f"Received HTML error page instead of JSON: {response.text[:500]}")
+                if len(temp_image_paths) == 0:
+                    logger.error("Failed to download any images for analysis")
                     return self.validate_analysis_response({
-                        "analysis_summary": "AI service returned HTML error page instead of analysis"
+                        "analysis_summary": "Could not download images for analysis"
                     })
+                elif len(temp_image_paths) < len(image_urls) * 0.5:  # If more than 50% failed
+                    logger.warning(f"Only downloaded {len(temp_image_paths)}/{len(image_urls)} images successfully")
                 
-                analysis_result = self.safe_parse_json_response(response.text)
-                logger.info(f"AI analysis completed with confidence: {analysis_result.get('confidence_score', 0)}")
-                return analysis_result
-            else:
-                logger.error("Empty response from Gemini API")
-                return self.validate_analysis_response({})
+                # Load compressed images just-in-time for API call
+                images = []
+                for temp_path in temp_image_paths:
+                    try:
+                        # Load compressed JPEG (much smaller memory footprint)
+                        img = Image.open(temp_path)
+                        images.append(img)
+                    except Exception as e:
+                        logger.warning(f"Failed to load temp image {temp_path}: {e}")
+                        continue
+            
+                # Generate comprehensive prompt
+                prompt = self.format_property_prompt(property_data)
+                
+                # Prepare content for Gemini (text + images)
+                content = [prompt] + images
+                
+                # Log memory before API call
+                pre_api_memory = process.memory_info().rss / 1024 / 1024
+                logger.info(f"Pre-API memory: {pre_api_memory:.1f}MB")
+                
+                # Make API call to Gemini with configurable thinking
+                logger.info(f"Analyzing property with {len(images)} images using {self.model_name} (thinking_budget={thinking_budget})")
+                
+                # Create generation config with thinking if enabled
+                config_params = {
+                    'temperature': 0.1,  # Low temperature for consistent analysis
+                    'top_p': 0.8,
+                    'top_k': 40,
+                    'max_output_tokens': 1000,
+                }
+                
+                # Add thinking config if enabled
+                if thinking_budget != 0:
+                    if thinking_budget == -1:
+                        # Dynamic thinking - let model decide
+                        config_params['thinking_config'] = types.ThinkingConfig()
+                    else:
+                        # Fixed thinking budget
+                        config_params['thinking_config'] = types.ThinkingConfig(steps=thinking_budget)
+                
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=content,
+                    config=types.GenerateContentConfig(**config_params)
+                )
+            
+                # Immediate cleanup of images after API call to free memory
+                try:
+                    for img in images:
+                        if hasattr(img, 'close'):
+                            img.close()
+                    images.clear()  # Clear the list
+                    del content  # Delete content array
+                    import gc
+                    gc.collect()  # Force garbage collection
+                    
+                    # Log memory after cleanup
+                    post_cleanup_memory = process.memory_info().rss / 1024 / 1024
+                    logger.info(f"Post-cleanup memory: {post_cleanup_memory:.1f}MB")
+                    logger.debug("Cleaned up images after API call")
+                except Exception as cleanup_error:
+                    logger.warning(f"Error during image cleanup: {cleanup_error}")
+                
+                # Parse response with better error handling
+                if response.text:
+                    logger.info(f"Received response from Gemini API, length: {len(response.text)} chars")
+                    
+                    # Log first 200 chars to debug HTML/JSON issues
+                    preview = response.text[:200].replace('\n', ' ')
+                    logger.info(f"Response preview: {preview}")
+                    
+                    # Check if response looks like HTML (error page)
+                    if response.text.strip().startswith('<!doctype') or response.text.strip().startswith('<html'):
+                        logger.error(f"Received HTML error page instead of JSON: {response.text[:500]}")
+                        return self.validate_analysis_response({
+                            "analysis_summary": "AI service returned HTML error page instead of analysis"
+                        })
+                    
+                    analysis_result = self.safe_parse_json_response(response.text)
+                    logger.info(f"AI analysis completed with confidence: {analysis_result.get('confidence_score', 0)}")
+                    return analysis_result
+                else:
+                    logger.error("Empty response from Gemini API")
+                    return self.validate_analysis_response({})
+                    
+            finally:
+                # Always cleanup temporary files
+                self._cleanup_temp_files(temp_image_paths, temp_dir)
                 
         except Exception as e:
             logger.error(f"Gemini analysis failed: {e}")
@@ -246,9 +290,39 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
             except:
                 pass  # Don't let cleanup errors mask the original error
             
+            # Always cleanup temporary files in case of error
+            try:
+                if 'temp_image_paths' in locals() and 'temp_dir' in locals():
+                    self._cleanup_temp_files(temp_image_paths, temp_dir)
+            except:
+                pass
+            
             return self.validate_analysis_response({
                 "analysis_summary": f"Analysis failed: {str(e)}"
             })
+    
+    def _cleanup_temp_files(self, temp_image_paths: list, temp_dir: str):
+        """Clean up temporary image files and directory"""
+        try:
+            # Remove individual temp files
+            for temp_path in temp_image_paths:
+                try:
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
+                except Exception as e:
+                    logger.warning(f"Failed to remove temp file {temp_path}: {e}")
+            
+            # Remove temp directory
+            try:
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp directory {temp_dir}: {e}")
+                
+            logger.debug(f"Cleaned up {len(temp_image_paths)} temp files and directory")
+            
+        except Exception as e:
+            logger.warning(f"Error during temp file cleanup: {e}")
     
     def _analyze_multiple_batches(self, property_data: Dict[str, Any], image_urls: list, batch_size: int) -> Dict[str, Any]:
         """
