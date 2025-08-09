@@ -926,6 +926,9 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 if result.get('images') and len(result['images']) > 0:
                     result['images'] = self._validate_and_optimize_images(result['images'])
                 
+                # Validate and sanitize all data before returning
+                result = self._sanitize_scraped_data(result)
+                
                 return result
                 
             except Exception as e:
@@ -1121,6 +1124,9 @@ class PropertyViewSet(viewsets.ModelViewSet):
         
         # Remove None values
         scraped_data = {k: v for k, v in scraped_data.items() if v is not None}
+        
+        # Validate and sanitize all data before returning
+        scraped_data = self._sanitize_scraped_data(scraped_data)
         
         # AI analysis is now handled separately via /analyze endpoint
         # This keeps scraping fast and reliable
@@ -1465,7 +1471,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         for selector in selectors:
             element = soup.select_one(selector)
             if element:
-                address = element.get_text(strip=True)
+                address = element.get_text(separator=' ', strip=True)  # Add space separator
                 # Clean up address text (remove extra whitespace, postal codes for first line)
                 if address and len(address) > 10:
                     # For Realtor.ca, take first line if multi-line address
@@ -1473,8 +1479,120 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     if len(address_lines) > 1:
                         # Take the first line (street address)
                         address = address_lines[0].strip()
+                    
+                    # Additional cleanup for malformed addresses
+                    address = self._clean_address(address)
                     return address
         return None
+    
+    def _clean_address(self, address):
+        """Clean and format address string to fix common parsing issues"""
+        if not address:
+            return None
+            
+        import re
+        
+        # Remove multiple spaces
+        address = re.sub(r'\s+', ' ', address.strip())
+        
+        # Fix missing spaces before city names (common realtor.ca issue)
+        # Pattern: "AVENUESurrey" -> "AVENUE Surrey"
+        address = re.sub(r'([A-Z]{2,}|AVENUE|STREET|ROAD|DRIVE|LANE|WAY|COURT|PLACE)([A-Z][a-z]+)', r'\1 \2', address)
+        
+        # Fix missing spaces around common address components
+        address = re.sub(r'([A-Za-z])([A-Z][a-z])', r'\1 \2', address)
+        
+        # Clean up any double spaces created by the replacements
+        address = re.sub(r'\s+', ' ', address.strip())
+        
+        return address
+    
+    def _sanitize_scraped_data(self, data):
+        """Sanitize scraped data to meet database constraints and prevent errors"""
+        if not data:
+            return data
+            
+        sanitized = data.copy()
+        
+        # Address validation (max_length=255)
+        if 'address' in sanitized and sanitized['address']:
+            address = str(sanitized['address'])
+            if len(address) > 255:
+                # Truncate but try to keep meaningful part
+                sanitized['address'] = address[:252] + '...'
+                logger.warning(f"Address truncated from {len(address)} to 255 chars")
+            else:
+                sanitized['address'] = address
+        
+        # Notes validation (TextField, but be reasonable)
+        if 'notes' in sanitized and sanitized['notes']:
+            notes = str(sanitized['notes'])
+            if len(notes) > 2000:  # Reasonable limit
+                sanitized['notes'] = notes[:1997] + '...'
+                logger.warning(f"Notes truncated from {len(notes)} to 2000 chars")
+        
+        # Price validation (max_digits=12, decimal_places=2)
+        if 'price' in sanitized and sanitized['price'] is not None:
+            try:
+                price = float(sanitized['price'])
+                # Check if price is reasonable (less than 999,999,999.99)
+                if price > 999999999.99:
+                    logger.warning(f"Price {price} exceeds database limit, setting to None")
+                    sanitized['price'] = None
+                elif price < 0:
+                    logger.warning(f"Negative price {price}, setting to None")
+                    sanitized['price'] = None
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid price format: {sanitized['price']}")
+                sanitized['price'] = None
+        
+        # Beds validation (PositiveSmallIntegerField - max 32767)
+        if 'beds' in sanitized and sanitized['beds'] is not None:
+            try:
+                beds = int(sanitized['beds'])
+                if beds < 0 or beds > 50:  # Reasonable limits
+                    logger.warning(f"Invalid beds count: {beds}, setting to None")
+                    sanitized['beds'] = None
+                else:
+                    sanitized['beds'] = beds
+            except (ValueError, TypeError):
+                sanitized['beds'] = None
+        
+        # Baths validation (max_digits=3, decimal_places=1)
+        if 'baths' in sanitized and sanitized['baths'] is not None:
+            try:
+                baths = float(sanitized['baths'])
+                if baths < 0 or baths > 99.9:  # Reasonable limits
+                    logger.warning(f"Invalid baths count: {baths}, setting to None")
+                    sanitized['baths'] = None
+                else:
+                    sanitized['baths'] = round(baths, 1)
+            except (ValueError, TypeError):
+                sanitized['baths'] = None
+        
+        # Sqft validation (PositiveIntegerField)
+        if 'sqft' in sanitized and sanitized['sqft'] is not None:
+            try:
+                sqft = int(sanitized['sqft'])
+                if sqft < 0 or sqft > 100000:  # Reasonable limits
+                    logger.warning(f"Invalid sqft: {sqft}, setting to None")
+                    sanitized['sqft'] = None
+                else:
+                    sanitized['sqft'] = sqft
+            except (ValueError, TypeError):
+                sanitized['sqft'] = None
+        
+        # Image URLs validation
+        if 'images' in sanitized and sanitized['images']:
+            if not isinstance(sanitized['images'], list):
+                sanitized['images'] = []
+            else:
+                # Limit number of images to prevent oversized JSON
+                if len(sanitized['images']) > 50:
+                    sanitized['images'] = sanitized['images'][:50]
+                    logger.warning(f"Truncated images to 50 from {len(data.get('images', []))}")
+        
+        return sanitized
 
     def _extract_price(self, soup):
         """Extract property price."""
