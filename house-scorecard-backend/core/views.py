@@ -869,24 +869,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Strategy 1: Try ultra-fast Playwright with very short timeouts for realtor.ca
         if is_realtor_ca and PLAYWRIGHT_AVAILABLE:
             try:
-                logger.info("Attempting fast Playwright scraping for realtor.ca (15s max)")
+                logger.info("Attempting fast Playwright scraping for realtor.ca")
                 
-                # Add hard timeout wrapper to prevent worker death
-                import signal
-                
-                def timeout_handler(signum, frame):
-                    raise Exception("Playwright timeout exceeded - preventing worker death")
-                
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(15)  # 15 second hard limit
-                
-                try:
-                    content = _scrape_with_playwright(url)
-                    signal.alarm(0)  # Cancel alarm
-                    logger.info("Playwright scraping successful, parsing content")
-                except Exception as e:
-                    signal.alarm(0)  # Cancel alarm
-                    raise e
+                # Use simple timeout approach instead of signals (signals can crash Django workers)
+                content = _scrape_with_playwright(url)
+                logger.info("Playwright scraping successful, parsing content")
                 
                 # Parse with BeautifulSoup using generic extraction methods
                 soup = BeautifulSoup(content, 'html.parser')
