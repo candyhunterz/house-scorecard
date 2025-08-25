@@ -1021,7 +1021,31 @@ class PropertyViewSet(viewsets.ModelViewSet):
         if is_zealty:
             return self._scrape_zealty(url, session or cf_requests.Session(impersonate="chrome120"))
         
-        # Handle REW.ca specifically
+        # Handle REW.ca specifically - use same approach as realtor.ca
+        if is_rew_ca and PLAYWRIGHT_AVAILABLE:
+            try:
+                logger.info("Attempting isolated Playwright scraping for REW.ca")
+                
+                # For REW.ca, use isolated browser to prevent state corruption (same as realtor.ca)
+                content = _scrape_with_isolated_playwright(url)
+                logger.info("Playwright scraping successful, parsing content")
+                
+                # Parse with BeautifulSoup using REW.ca specific extraction methods
+                soup = BeautifulSoup(content, 'html.parser')
+                
+                # Use REW.ca specific parsing methods
+                result = self._parse_rew_ca_content(soup, url)
+                if result and len(result) > 0:
+                    logger.info(f"REW.ca Playwright scraping extracted {len(result)} fields")
+                    return result
+                else:
+                    logger.warning("REW.ca Playwright scraping returned no data")
+                    
+            except Exception as e:
+                logger.error(f"REW.ca Playwright scraping failed: {str(e)}")
+                # Fall through to curl_cffi method below
+        
+        # Fallback: Try curl_cffi for REW.ca if Playwright fails or not available
         if is_rew_ca:
             return self._scrape_rew_ca(url, session or cf_requests.Session(impersonate="chrome120"))
         
@@ -1499,12 +1523,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
             raise Exception(f'Failed to extract data from Zealty.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
 
     def _scrape_rew_ca(self, url, session):
-        """Special scraping method for REW.ca listings."""
-        import re
+        """Fallback scraping method for REW.ca listings using curl_cffi."""
         from bs4 import BeautifulSoup
         
         try:
-            logger.info(f"Scraping REW.ca listing: {url}")
+            logger.info(f"REW.ca fallback scraping with curl_cffi: {url}")
             
             # Configure session with realistic headers for REW.ca
             headers = {
@@ -1529,6 +1552,15 @@ class PropertyViewSet(viewsets.ModelViewSet):
             content = response.text
             soup = BeautifulSoup(content, 'html.parser')
             
+            # Use the same parsing logic as Playwright method
+            return self._parse_rew_ca_content(soup, url)
+
+    def _parse_rew_ca_content(self, soup, url):
+        """Parse REW.ca content from BeautifulSoup (works with both Playwright and curl_cffi content)."""
+        import re
+        import json
+        
+        try:
             scraped_data = {}
             
             # Try to extract data from JSON-LD structured data first
@@ -1537,7 +1569,6 @@ class PropertyViewSet(viewsets.ModelViewSet):
             
             for script in json_ld_scripts:
                 try:
-                    import json
                     data = json.loads(script.string)
                     if isinstance(data, dict) and data.get('@type') in ['RealEstateListing', 'Product', 'Place']:
                         property_data = data
@@ -1630,16 +1661,6 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 scraped_data['price'] = int(price)
             
             # Extract bedrooms and bathrooms
-            bed_bath_selectors = [
-                '.property-features .beds',
-                '.property-features .baths',
-                '.listing-features',
-                '.property-details',
-                '[data-testid="beds"]',
-                '[data-testid="baths"]'
-            ]
-            
-            # Look for bed/bath information in various elements
             for elem in soup.find_all(['span', 'div', 'p']):
                 text = elem.get_text().lower()
                 if 'bed' in text and not scraped_data.get('beds'):
@@ -1736,12 +1757,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     scraped_data['images'] = optimized_images
                     logger.info(f"Extracted {len(unique_urls)} images, optimized {len(optimized_images)}")
             
-            logger.info(f"REW.ca scraping completed successfully with {len(scraped_data)} data fields")
+            logger.info(f"REW.ca parsing completed successfully with {len(scraped_data)} data fields")
             return scraped_data
             
         except Exception as e:
-            logger.error(f"REW.ca scraping failed: {str(e)}")
-            raise Exception(f'Failed to extract data from REW.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
+            logger.error(f"REW.ca content parsing failed: {str(e)}")
+            raise Exception(f'Failed to parse REW.ca content: {str(e)}')
 
     def _extract_images(self, soup, base_url):
         """Extract property images from various selectors with size validation."""

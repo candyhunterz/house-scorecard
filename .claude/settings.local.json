@@ -61,7 +61,8 @@
       "Bash(timeout:*)",
       "WebFetch(domain:www.rew.ca)",
       "Bash(\".\\venv\\Scripts\\python.exe\" test_rew_ca.py)",
-      "Bash(\".\\venv\\Scripts\\python.exe\" ../test_rew_ca.py)"
+      "Bash(\".\\venv\\Scripts\\python.exe\" ../test_rew_ca.py)",
+      "Bash(\".\\venv\\Scripts\\python.exe\" ../debug_rew_ca.py)"
     ],
     "deny": []
   }
