@@ -890,6 +890,8 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     min_interval = 30  # 30s for HouseSigma (though scraping won't work)
                 elif 'zealty.ca' in domain:
                     min_interval = 20  # 20s for Zealty.ca (lighter rate limiting)
+                elif 'rew.ca' in domain:
+                    min_interval = 25  # 25s for REW.ca (moderate rate limiting)
                 else:
                     min_interval = 30  # 30s for other sites
                 time_since_last = time.time() - last_scrape
@@ -1007,6 +1009,9 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Detect if this is Zealty.ca for special handling
         is_zealty = 'zealty.ca' in url.lower()
         
+        # Detect if this is REW.ca for special handling
+        is_rew_ca = 'rew.ca' in url.lower()
+        
         # Handle HouseSigma.com specifically
         if is_housesigma:
             # HouseSigma is a JavaScript SPA that can't be scraped with traditional methods
@@ -1015,6 +1020,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Handle Zealty.ca specifically - extract from JavaScript gData variable
         if is_zealty:
             return self._scrape_zealty(url, session or cf_requests.Session(impersonate="chrome120"))
+        
+        # Handle REW.ca specifically
+        if is_rew_ca:
+            return self._scrape_rew_ca(url, session or cf_requests.Session(impersonate="chrome120"))
         
         # Strategy 1: Try ultra-fast Playwright with very short timeouts for realtor.ca
         if is_realtor_ca and PLAYWRIGHT_AVAILABLE:
@@ -1488,6 +1497,251 @@ class PropertyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Zealty.ca scraping failed: {str(e)}")
             raise Exception(f'Failed to extract data from Zealty.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
+
+    def _scrape_rew_ca(self, url, session):
+        """Special scraping method for REW.ca listings."""
+        import re
+        from bs4 import BeautifulSoup
+        
+        try:
+            logger.info(f"Scraping REW.ca listing: {url}")
+            
+            # Configure session with realistic headers for REW.ca
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/avif,*/*;q=0.8',
+                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0'
+            }
+            
+            session.headers.update(headers)
+            response = session.get(url, timeout=20, allow_redirects=True)
+            response.raise_for_status()
+            
+            logger.info(f"Successfully fetched REW.ca page, status: {response.status_code}, content length: {len(response.content)} bytes")
+            
+            content = response.text
+            soup = BeautifulSoup(content, 'html.parser')
+            
+            scraped_data = {}
+            
+            # Try to extract data from JSON-LD structured data first
+            json_ld_scripts = soup.find_all('script', type='application/ld+json')
+            property_data = None
+            
+            for script in json_ld_scripts:
+                try:
+                    import json
+                    data = json.loads(script.string)
+                    if isinstance(data, dict) and data.get('@type') in ['RealEstateListing', 'Product', 'Place']:
+                        property_data = data
+                        logger.info("Found JSON-LD structured data")
+                        break
+                    elif isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, dict) and item.get('@type') in ['RealEstateListing', 'Product', 'Place']:
+                                property_data = item
+                                logger.info("Found JSON-LD structured data in array")
+                                break
+                except Exception as e:
+                    logger.debug(f"Failed to parse JSON-LD: {e}")
+                    continue
+            
+            # Extract address
+            address = None
+            if property_data and property_data.get('address'):
+                addr_data = property_data['address']
+                if isinstance(addr_data, dict):
+                    street = addr_data.get('streetAddress', '')
+                    city = addr_data.get('addressLocality', '')
+                    province = addr_data.get('addressRegion', '')
+                    address = f"{street}, {city}, {province}".strip(', ')
+                elif isinstance(addr_data, str):
+                    address = addr_data
+            
+            if not address:
+                # Try CSS selectors for address
+                address_selectors = [
+                    'h1.property-address',
+                    '.property-details .address',
+                    '.listing-address',
+                    '[data-testid="property-address"]',
+                    '.property-title h1',
+                    'h1'
+                ]
+                
+                for selector in address_selectors:
+                    addr_elem = soup.select_one(selector)
+                    if addr_elem:
+                        address = addr_elem.get_text().strip()
+                        logger.info(f"Extracted address from {selector}: {address}")
+                        break
+            
+            if address:
+                scraped_data['address'] = address
+            
+            # Extract price
+            price = None
+            if property_data and property_data.get('offers'):
+                offers = property_data['offers']
+                if isinstance(offers, dict) and offers.get('price'):
+                    try:
+                        price = float(str(offers['price']).replace('$', '').replace(',', ''))
+                    except ValueError:
+                        pass
+                elif isinstance(offers, list) and len(offers) > 0 and offers[0].get('price'):
+                    try:
+                        price = float(str(offers[0]['price']).replace('$', '').replace(',', ''))
+                    except ValueError:
+                        pass
+            
+            if not price:
+                # Try CSS selectors for price
+                price_selectors = [
+                    '.price',
+                    '.listing-price',
+                    '.property-price',
+                    '[data-testid="price"]',
+                    '.price-value',
+                    '.listing-details .price'
+                ]
+                
+                for selector in price_selectors:
+                    price_elem = soup.select_one(selector)
+                    if price_elem:
+                        price_text = price_elem.get_text().strip()
+                        # Extract numeric price
+                        price_match = re.search(r'\$?([\d,]+)', price_text.replace(',', ''))
+                        if price_match:
+                            try:
+                                price = float(price_match.group(1))
+                                logger.info(f"Extracted price from {selector}: ${price:,.0f}")
+                                break
+                            except ValueError:
+                                continue
+            
+            if price:
+                scraped_data['price'] = int(price)
+            
+            # Extract bedrooms and bathrooms
+            bed_bath_selectors = [
+                '.property-features .beds',
+                '.property-features .baths',
+                '.listing-features',
+                '.property-details',
+                '[data-testid="beds"]',
+                '[data-testid="baths"]'
+            ]
+            
+            # Look for bed/bath information in various elements
+            for elem in soup.find_all(['span', 'div', 'p']):
+                text = elem.get_text().lower()
+                if 'bed' in text and not scraped_data.get('beds'):
+                    bed_match = re.search(r'(\d+)\s*bed', text)
+                    if bed_match:
+                        scraped_data['beds'] = int(bed_match.group(1))
+                        logger.info(f"Extracted beds: {bed_match.group(1)}")
+                
+                if 'bath' in text and not scraped_data.get('baths'):
+                    bath_match = re.search(r'(\d+(?:\.\d+)?)\s*bath', text)
+                    if bath_match:
+                        scraped_data['baths'] = float(bath_match.group(1))
+                        logger.info(f"Extracted baths: {bath_match.group(1)}")
+            
+            # Extract square footage
+            sqft_selectors = [
+                '.square-feet',
+                '.sqft',
+                '.property-size',
+                '[data-testid="sqft"]'
+            ]
+            
+            for selector in sqft_selectors:
+                sqft_elem = soup.select_one(selector)
+                if sqft_elem:
+                    sqft_text = sqft_elem.get_text()
+                    sqft_match = re.search(r'([\d,]+)', sqft_text.replace(',', ''))
+                    if sqft_match:
+                        try:
+                            scraped_data['sqft'] = int(sqft_match.group(1))
+                            logger.info(f"Extracted sqft from {selector}: {sqft_match.group(1)}")
+                            break
+                        except ValueError:
+                            continue
+            
+            # If not found in specific selectors, search in all text
+            if not scraped_data.get('sqft'):
+                for elem in soup.find_all(['span', 'div', 'p']):
+                    text = elem.get_text()
+                    sqft_match = re.search(r'([\d,]+)\s*sq\.?\s*ft', text, re.IGNORECASE)
+                    if sqft_match:
+                        try:
+                            scraped_data['sqft'] = int(sqft_match.group(1).replace(',', ''))
+                            logger.info(f"Extracted sqft from text: {sqft_match.group(1)}")
+                            break
+                        except ValueError:
+                            continue
+            
+            # Extract description
+            description_selectors = [
+                '.property-description',
+                '.listing-description',
+                '.description',
+                '[data-testid="description"]',
+                '.property-details .description'
+            ]
+            
+            for selector in description_selectors:
+                desc_elem = soup.select_one(selector)
+                if desc_elem:
+                    description = desc_elem.get_text().strip()
+                    if len(description) > 50:  # Only keep substantial descriptions
+                        scraped_data['description'] = description
+                        logger.info(f"Extracted description: {len(description)} characters")
+                        break
+            
+            # Extract images
+            image_urls = []
+            image_selectors = [
+                '.property-images img',
+                '.gallery img',
+                '.photo-gallery img',
+                '.listing-photos img',
+                '[data-testid="property-image"]',
+                '.property-photo img'
+            ]
+            
+            for selector in image_selectors:
+                images = soup.select(selector)
+                for img in images:
+                    src = img.get('src') or img.get('data-src') or img.get('data-original')
+                    if src:
+                        if src.startswith('/'):
+                            src = f"https://www.rew.ca{src}"
+                        elif src.startswith('//'):
+                            src = f"https:{src}"
+                        image_urls.append(src)
+            
+            # Remove duplicates and validate
+            if image_urls:
+                unique_urls = list(dict.fromkeys(image_urls))  # Remove duplicates while preserving order
+                optimized_images = self._validate_and_optimize_images(unique_urls)
+                if optimized_images:
+                    scraped_data['images'] = optimized_images
+                    logger.info(f"Extracted {len(unique_urls)} images, optimized {len(optimized_images)}")
+            
+            logger.info(f"REW.ca scraping completed successfully with {len(scraped_data)} data fields")
+            return scraped_data
+            
+        except Exception as e:
+            logger.error(f"REW.ca scraping failed: {str(e)}")
+            raise Exception(f'Failed to extract data from REW.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
 
     def _extract_images(self, soup, base_url):
         """Extract property images from various selectors with size validation."""
@@ -2081,6 +2335,18 @@ class PropertyViewSet(viewsets.ModelViewSet):
             else:
                 # Add size parameters if none exist
                 optimized_url = f"{original_url}?w=512&h=384&fit=crop&quality=80"
+                return optimized_url
+        
+        # REW.ca images - try to append size parameters
+        elif 'rew.ca' in original_url:
+            # REW.ca might support size parameters
+            if '?' in original_url:
+                # Check if size params already exist
+                if not any(param in original_url for param in ['w=', 'width=', 'size=']):
+                    optimized_url = f"{original_url}&w=512&h=384"
+                    return optimized_url
+            else:
+                optimized_url = f"{original_url}?w=512&h=384"
                 return optimized_url
         
         # Zealty.ca and other sites - try to append size parameters

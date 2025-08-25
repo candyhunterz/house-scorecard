@@ -58,7 +58,10 @@
       "Bash(npm run test:*)",
       "Bash(npx playwright:*)",
       "Bash(mkdir:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "WebFetch(domain:www.rew.ca)",
+      "Bash(\".\\venv\\Scripts\\python.exe\" test_rew_ca.py)",
+      "Bash(\".\\venv\\Scripts\\python.exe\" ../test_rew_ca.py)"
     ],
     "deny": []
   }
