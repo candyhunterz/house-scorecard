@@ -1554,6 +1554,10 @@ class PropertyViewSet(viewsets.ModelViewSet):
             
             # Use the same parsing logic as Playwright method
             return self._parse_rew_ca_content(soup, url)
+            
+        except Exception as e:
+            logger.error(f"REW.ca fallback scraping failed: {str(e)}")
+            raise Exception(f'Failed to extract data from REW.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
 
     def _parse_rew_ca_content(self, soup, url):
         """Parse REW.ca content from BeautifulSoup (works with both Playwright and curl_cffi content)."""
