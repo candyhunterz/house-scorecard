@@ -32,7 +32,7 @@ class GeminiPropertyAnalyzer(BaseAIAnalyzer):
     
     def get_model_name(self) -> str:
         """Return Gemini model name"""
-        return getattr(settings, 'GEMINI_MODEL_NAME', 'gemini-2.5-flash-lite')
+        return getattr(settings, 'GEMINI_MODEL_NAME', 'gemini-flash-latest')
     
     def download_and_compress_image(self, image_url: str, temp_dir: str = None) -> str:
         """Download, process, and save image as compressed JPEG to reduce memory usage"""

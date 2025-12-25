@@ -28,17 +28,14 @@ function FitBounds({ properties }) {
         validProperties.map(p => [p.latitude, p.longitude])
       );
       if (bounds.isValid()) {
-         console.log("Fitting map bounds:", bounds);
          map.fitBounds(bounds, { padding: [50, 50] }); // Add some padding
       } else {
-          console.log("Calculated bounds are invalid.");
           // Fallback to a default view if bounds are invalid (e.g., single point)
           map.setView([validProperties[0].latitude, validProperties[0].longitude], 13);
       }
 
     } else {
       // Default view if no valid properties
-      console.log("No valid properties with coordinates, setting default view.");
       map.setView([40.7128, -74.0060], 5); // Default to NYC area, zoom level 5
     }
   }, [properties, map]); // Dependencies
@@ -81,7 +78,6 @@ function MapPage() {
         showInfo('No additional properties could be geocoded.');
       }
     } catch (error) {
-      console.error('Geocoding error:', error);
       showError('Failed to add properties to map. Please try again.');
     } finally {
       setIsGeocoding(false);

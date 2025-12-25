@@ -26,7 +26,6 @@ export function AuthProvider({ children }) {
             setUser({ username: storedUsername });
           }
         } catch (error) {
-          console.error('Token validation failed:', error);
           // Clear invalid tokens
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
@@ -112,7 +111,6 @@ export function AuthProvider({ children }) {
       localStorage.setItem('accessToken', data.access);
       return data.access;
     } catch (error) {
-      console.error('Token refresh failed:', error);
       logout();
       return null;
     }
@@ -142,7 +140,6 @@ export function AuthProvider({ children }) {
 
     // If we get a 401, try to refresh the token and retry once
     if (response.status === 401) {
-      console.log('Token expired, attempting refresh...');
       const newToken = await refreshToken();
       
       if (newToken) {

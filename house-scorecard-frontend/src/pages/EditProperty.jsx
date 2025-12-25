@@ -106,13 +106,13 @@ function EditProperty() {
             }
 
             setFormData(updatedFormData);
-            
+
             // Handle AI analysis if available
             if (data.ai_analysis) {
                 setAiAnalysisData(data.ai_analysis);
                 const grade = data.ai_analysis.overall_grade || 'Unknown';
                 const redFlagsCount = data.ai_analysis.red_flags?.length || 0;
-                
+
                 if (redFlagsCount > 0) {
                     showSuccess(`✅ Auto-filled property data! Found ${data.images?.length || 0} images.\n🤖 AI Analysis: Grade ${grade} with ${redFlagsCount} potential issues detected.`);
                 } else {
@@ -121,9 +121,8 @@ function EditProperty() {
             } else {
                 showSuccess(`Auto-filled property data! Found ${data.images?.length || 0} images.`);
             }
-            
+
         } catch (error) {
-            console.error('Auto-fill error:', error);
             const errorMsg = error.message;
             
             // Show helpful message for anti-bot protection
@@ -177,7 +176,6 @@ function EditProperty() {
             showSuccess('Property updated successfully!');
             navigate(`/properties/${property.id}`); // Go back to detail page
         } catch (err) {
-            console.error('Failed to update property:', err);
             showError('Failed to update property. Please try again.');
         }
     };

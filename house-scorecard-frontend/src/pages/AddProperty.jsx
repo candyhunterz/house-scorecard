@@ -133,11 +133,10 @@ function AddProperty() {
       } else {
         showSuccess(`✅ Auto-filled property data! No images found - AI analysis requires property images.`);
       }
-      
+
     } catch (error) {
-      console.error('Auto-fill error:', error);
       const errorMsg = error.message;
-      
+
       // Show helpful message for anti-bot protection
       if (errorMsg.includes('blocked') || errorMsg.includes('security') || errorMsg.includes('automated requests') || errorMsg.includes('anti-bot protection') || errorMsg.includes('Incapsula') || errorMsg.includes('too small')) {
         showError(`🚫 ${errorMsg}\n\n💡 How to get the data manually:\n1. Open the listing URL in your browser\n2. Copy the address, price, beds, baths, sqft\n3. Right-click on photos → "Copy image address" for each photo\n4. Paste the details into the form below`);
@@ -228,7 +227,6 @@ function AddProperty() {
       }
 
     } catch (error) {
-      console.error('AI analysis error:', error);
       showError(`AI analysis failed: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
@@ -290,7 +288,6 @@ function AddProperty() {
         showSuccess('Property added successfully!'); // Provide user feedback
         navigate('/properties'); // Navigate back to the dashboard after successful add
     } catch (error) {
-        console.error("Error adding property:", error);
         showError("An error occurred while adding the property. Please try again."); // Error feedback
     }
   }; // End handleSubmit
@@ -324,7 +321,6 @@ function AddProperty() {
           navigate('/properties');
       }
     } catch (error) {
-      console.error('Error in cancel handler:', error);
       // Fallback - just navigate away
       navigate('/properties');
     }

@@ -22,7 +22,6 @@ const PropertyCard = memo(({ property, showStatusSelector = false }) => {
         style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0,
       }).format(Number(price));
     } catch (error) {
-      console.error("Error formatting price in card:", error, price);
       return 'Error';
     }
   };

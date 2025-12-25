@@ -31,7 +31,6 @@ export function CriteriaProvider({ children }) {
         const data = await response.json();
         setCriteria(data);
       } catch (error) {
-        console.error('Failed to fetch criteria:', error);
       }
     };
 
@@ -44,16 +43,12 @@ export function CriteriaProvider({ children }) {
 
   /** Adds a new criterion object to the state */
   const addCriterion = useCallback(async (newCriterion) => {
-    console.log("CONTEXT: addCriterion called with:", newCriterion);
-
     // --- Input Validation ---
     if (!newCriterion.text || !newCriterion.type) {
-      console.error("Add Criterion failed: text and type are required.");
       return;
     }
     const trimmedText = newCriterion.text.trim();
     if (!trimmedText) {
-        console.error("Add Criterion failed: text cannot be empty.");
         return;
     }
 
@@ -64,7 +59,6 @@ export function CriteriaProvider({ children }) {
         // Validate Weight (1-10)
         const numWeight = Number(newCriterion.weight);
         if (isNaN(numWeight) || numWeight < 1 || numWeight > 10) {
-            console.warn("Add Criterion: Invalid weight provided, defaulting to 5.");
             criterionWeight = 5;
         } else {
             criterionWeight = numWeight;
@@ -73,7 +67,6 @@ export function CriteriaProvider({ children }) {
         if (newCriterion.ratingType && RATING_TYPES.includes(newCriterion.ratingType)) {
             criterionRatingType = newCriterion.ratingType;
         } else {
-            console.warn(`Add Criterion: Invalid or missing ratingType "${newCriterion.ratingType}", defaulting to '${RATING_TYPE_STARS}'.`);
             criterionRatingType = RATING_TYPE_STARS; // Default if invalid or missing
         }
     }
@@ -103,14 +96,12 @@ export function CriteriaProvider({ children }) {
       const savedCriterion = await response.json();
       setCriteria(prevCriteria => [...prevCriteria, savedCriterion]);
     } catch (error) {
-      console.error('Failed to add criterion:', error);
     }
 
   }, [authenticatedFetch]); // Depends on authenticatedFetch
 
   /** Deletes a criterion from the state by its ID */
   const deleteCriterion = useCallback(async (id) => {
-    console.log(`CONTEXT: deleteCriterion called for ID: ${id}`);
     try {
       const response = await authenticatedFetch(getApiUrl(`/criteria/${id}/`), {
         method: 'DELETE',
@@ -120,24 +111,19 @@ export function CriteriaProvider({ children }) {
       }
       setCriteria(prevCriteria => prevCriteria.filter(c => c.id !== id));
     } catch (error) {
-      console.error('Failed to delete criterion:', error);
     }
   }, [authenticatedFetch]); // Depends on authenticatedFetch
 
   /** Updates an existing criterion in the state */
   const updateCriterion = useCallback(async (id, updatedData) => {
-     console.log(`CONTEXT: updateCriterion called for ID: ${id}`, updatedData);
-
      // --- Input Validation for Update ---
      if (!updatedData) {
-         console.error("Update failed: No update data provided.");
          return;
      }
      // Validate text if provided
      if (updatedData.text !== undefined) {
         const trimmedText = updatedData.text?.trim();
         if (!trimmedText) {
-            console.error("Update failed: Criterion text cannot be empty.");
             return;
         }
         updatedData.text = trimmedText; // Use the trimmed text
@@ -147,7 +133,6 @@ export function CriteriaProvider({ children }) {
      if (updatedData.weight !== undefined) {
          const numWeight = Number(updatedData.weight);
          if (isNaN(numWeight) || numWeight < 1 || numWeight > 10) {
-            console.error("Update failed: Weight must be a number between 1 and 10.");
             return;
          }
          validatedWeight = numWeight;
@@ -164,7 +149,6 @@ export function CriteriaProvider({ children }) {
             validatedRatingType = updatedData.ratingType;
             updatedData.ratingType = validatedRatingType; // Ensure updatedData has the validated type
          } else {
-            console.warn(`Update Warning: Invalid ratingType "${updatedData.ratingType}" for criterion ${id}. Ignoring type update.`);
             // Don't include invalid ratingType in updatedData
             delete updatedData.ratingType;
          }
@@ -192,7 +176,6 @@ export function CriteriaProvider({ children }) {
         prevCriteria.map(c => (c.id === savedCriterion.id ? savedCriterion : c))
       );
     } catch (error) {
-      console.error('Failed to update criterion:', error);
     }
   }, [criteria, authenticatedFetch]); // Depends on criteria and authenticatedFetch
 
@@ -200,23 +183,19 @@ export function CriteriaProvider({ children }) {
   // --- Memoize Derived Lists (using useMemo for stable references) ---
   // These filtered lists run only when the base 'criteria' array changes.
   const mustHaves = useMemo(() => {
-      console.log("CONTEXT: Memoizing mustHaves list");
       return criteria.filter(c => c.type === 'mustHave');
   }, [criteria]);
 
   const niceToHaves = useMemo(() => {
-       console.log("CONTEXT: Memoizing niceToHaves list");
       return criteria.filter(c => c.type === 'niceToHave');
   }, [criteria]);
 
   const dealBreakers = useMemo(() => {
-       console.log("CONTEXT: Memoizing dealBreakers list");
       return criteria.filter(c => c.type === 'dealBreaker');
   }, [criteria]);
 
   // --- Get unique category names (Memoized) ---
   const uniqueCategories = useMemo(() => {
-      console.log("CONTEXT: Memoizing uniqueCategories list");
       const categories = new Set(criteria.map(c => c.category).filter(Boolean));
       return Array.from(categories).sort();
   }, [criteria]);

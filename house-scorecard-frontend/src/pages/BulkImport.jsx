@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import './BulkImport.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -15,6 +16,7 @@ function BulkImport() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { authenticatedFetch } = useAuth();
 
   // Available property fields
   const propertyFields = [
@@ -46,17 +48,13 @@ function BulkImport() {
 
   const previewCSV = async (file) => {
     setIsUploading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/properties/preview_csv/`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/properties/preview_csv/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData
       });
 
@@ -66,13 +64,12 @@ function BulkImport() {
 
       const data = await response.json();
       setCsvData(data);
-      
+
       // Set initial mappings from suggestions
       setFieldMappings(data.suggested_mapping || {});
       setStep(2);
-      
+
     } catch (error) {
-      console.error('Preview failed:', error);
       showToast('Failed to preview CSV file', 'error');
     } finally {
       setIsUploading(false);
@@ -88,18 +85,14 @@ function BulkImport() {
 
   const handleImport = async () => {
     setIsUploading(true);
-    
+
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('mapping', JSON.stringify(fieldMappings));
 
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/properties/bulk_import/`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/properties/bulk_import/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData
       });
 
@@ -117,9 +110,8 @@ function BulkImport() {
           'success'
         );
       }
-      
+
     } catch (error) {
-      console.error('Import failed:', error);
       showToast('Failed to import properties', 'error');
     } finally {
       setIsUploading(false);

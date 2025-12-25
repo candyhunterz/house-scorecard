@@ -208,17 +208,10 @@ function PropertyDetail() {
     // --- Effects ---
     // Effect 1: Load property data and set INITIAL state when propertyId changes
     useEffect(() => {
-        console.log(`EFFECT 1 (Load): Running for propertyId: ${propertyId}`);
         setLoading(true);
         setProperty(null); setRatings({}); setCalculatedScore(null); setInitialRatingsLoaded(false); setPrevRatings({}); // Clear previous state
         const fetchedProperty = getPropertyById(propertyId); // Get data from context
         if (fetchedProperty) {
-            console.log('PROPERTY DETAIL: Loaded property:', fetchedProperty);
-            console.log('PROPERTY DETAIL: AI fields in property:', {
-                aiAnalysis: fetchedProperty.aiAnalysis,
-                aiOverallGrade: fetchedProperty.aiOverallGrade,
-                aiRedFlags: fetchedProperty.aiRedFlags?.length
-            });
             setProperty(fetchedProperty); // Set the main property object
             const initialRatings = fetchedProperty.ratings || {}; // Get ratings (or empty obj)
             setRatings(initialRatings); // Set local ratings state for inputs
@@ -229,7 +222,6 @@ function PropertyDetail() {
             setCalculatedScore(initialScore);
             setLoading(false); // Property found - stop loading
         } else {
-            console.log(`EFFECT 1 (Load): Property with ID ${propertyId} not found in context yet.`);
             // Don't set loading to false yet - PropertyContext might still be fetching
             // We'll handle this in the properties dependency effect below
         }
@@ -239,10 +231,8 @@ function PropertyDetail() {
     useEffect(() => {
         // Only run if we're currently loading and don't have a property yet
         if (loading && !property && propertyId && properties.length > 0) {
-            console.log(`EFFECT 1.5: Properties loaded, checking for propertyId: ${propertyId}`);
             const fetchedProperty = getPropertyById(propertyId);
             if (fetchedProperty) {
-                console.log(`EFFECT 1.5: Found property ${propertyId} after context loaded`);
                 setProperty(fetchedProperty);
                 const initialRatings = fetchedProperty.ratings || {};
                 setRatings(initialRatings);
@@ -252,7 +242,6 @@ function PropertyDetail() {
                 setCalculatedScore(initialScore);
                 setLoading(false);
             } else {
-                console.log(`EFFECT 1.5: Property ${propertyId} still not found after context loaded - showing error`);
                 setLoading(false); // Stop loading and show error
             }
         }
@@ -266,9 +255,8 @@ function PropertyDetail() {
         // 3. Criteria exist (to avoid division by zero)
         // 4. Ratings have actually changed (not just status updates)
         const ratingsChanged = JSON.stringify(ratings) !== JSON.stringify(prevRatings);
-        
+
         if (!loading && property && initialRatingsLoaded && ratingsChanged && (mustHaves.length > 0 || niceToHaves.length > 0 || dealBreakers.length > 0)) {
-            console.log('Ratings changed, updating score...');
             const newScore = calculateScore(ratings, mustHaves, niceToHaves, dealBreakers);
             setCalculatedScore(newScore); // Update score displayed on this page
             // Update the central context (PropertyContext)
@@ -285,7 +273,6 @@ function PropertyDetail() {
                 // Only sync if the context has a different status than what we currently have
                 // This prevents the sync from overriding immediate local updates
                 if (contextProperty.status !== property.status) {
-                    console.log('PropertyDetail: Syncing with context. Status from context:', contextProperty.status);
                     setProperty(contextProperty);
                 }
             } else if (contextProperty && !property) {
@@ -348,7 +335,6 @@ function PropertyDetail() {
             return;
         }
 
-        console.log(`Adding ${addedCount} new image URLs to property ${property.id}`);
         // Call the context function to update the property's imageUrls array
         updatePropertyImages(property.id, combinedUrls);
 
@@ -373,7 +359,6 @@ function PropertyDetail() {
                 showSuccess('Property deleted successfully!');
                 navigate('/properties'); // Redirect to properties list after deletion
             } catch (error) {
-                console.error('Error deleting property:', error);
                 showError('Failed to delete property.');
                 setIsDeleting(false); // Reset deleting state on error
             }
@@ -382,8 +367,6 @@ function PropertyDetail() {
 
     const handleStatusChange = async (newStatus) => {
         if (property) {
-            console.log('PropertyDetail: Changing status from', property.status, 'to', newStatus);
-            
             // Update local state immediately for instant UI feedback
             setProperty(prevProperty => ({
                 ...prevProperty,
@@ -394,7 +377,7 @@ function PropertyDetail() {
                     notes: null
                 }]
             }));
-            
+
             // Then update the context in the background
             updatePropertyStatus(property.id, newStatus);
         }
@@ -435,7 +418,6 @@ function PropertyDetail() {
                 showSuccess(`AI analysis completed! Grade: ${updatedProperty.aiOverallGrade || 'N/A'}`);
             }
         } catch (error) {
-            console.error('AI analysis failed:', error);
             showError(`AI analysis failed: ${error.message}`);
         } finally {
             setIsAnalyzingAI(false);
@@ -446,7 +428,7 @@ function PropertyDetail() {
     const formatPrice = (price) => {
        if (price == null || isNaN(Number(price))) { return 'N/A'; }
        try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0, }).format(Number(price)); }
-       catch (error) { console.error("Error formatting price:", error, "Input:", price); return 'Error'; }
+       catch (error) { return 'Error'; }
     };
     const getScoreClass = (score) => {
         if (score === null || score === undefined) return 'score-unknown';

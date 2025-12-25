@@ -46,22 +46,18 @@ export function PropertyProvider({ children }) {
             aiAnalysisSummary: property.aiAnalysisSummary || null,
             aiAnalysisDate: property.aiAnalysisDate || null
           }));
-          
-          console.log('CONTEXT: Properties loaded from backend:', propertiesWithDefaults);
+
           setProperties(propertiesWithDefaults);
           // Keep localStorage as backup
           localStorage.setItem('houseScorecard_properties', JSON.stringify(propertiesWithDefaults));
         } catch (error) {
-          console.error('Failed to fetch properties:', error);
           // Fallback to localStorage if backend fails
           const savedProperties = localStorage.getItem('houseScorecard_properties');
           if (savedProperties) {
             try {
               const parsedProperties = JSON.parse(savedProperties);
-              console.log('CONTEXT: Fallback - loading properties from localStorage:', parsedProperties);
               setProperties(parsedProperties);
             } catch (parseError) {
-              console.error('Failed to parse saved properties:', parseError);
             }
           }
         }
@@ -76,8 +72,6 @@ export function PropertyProvider({ children }) {
 
   /** Adds a new property, parsing the image URLs string into an array */
   const addProperty = useCallback(async (newPropertyData) => {
-    console.log("CONTEXT: addProperty called with raw data:", newPropertyData);
-
     // --- Parse imageUrlsString into an array ---
     let imageUrlsArray = [];
     if (newPropertyData.imageUrlsString) {
@@ -88,7 +82,6 @@ export function PropertyProvider({ children }) {
             .filter(url => url && url.length > 5); // Remove empty strings and very short strings (basic filter)
             // Optional: Add more robust URL validation here if needed (e.g., using URL constructor)
     }
-    console.log("CONTEXT: Parsed Image URLs:", imageUrlsArray);
     // --- End Parsing ---
 
     // Create the final property object to add to state
@@ -144,8 +137,6 @@ export function PropertyProvider({ children }) {
           aiAnalysisDate: newPropertyData.aiAnalysisDate
         })
       };
-      
-      console.log("CONTEXT: backendProperty being sent to API:", backendProperty);
 
       const response = await authenticatedFetch(getApiUrl('/properties/'), {
         method: 'POST',
@@ -188,7 +179,6 @@ export function PropertyProvider({ children }) {
       // Return the saved property with ID for further processing
       return savedPropertyWithDefaults;
     } catch (error) {
-      console.error('Failed to add property:', error);
       throw error; // Re-throw so caller can handle the error
     }
   }, [authenticatedFetch]); // Depends on authenticatedFetch
@@ -202,7 +192,6 @@ export function PropertyProvider({ children }) {
 
   /** Updates the ratings and calculated score for a specific property */
   const updatePropertyRatingsAndScore = useCallback(async (propertyId, newRatings, newScore) => {
-    
     const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
     if (!propertyToUpdate) return;
 
@@ -217,11 +206,10 @@ export function PropertyProvider({ children }) {
       const newProperties = prevProperties.map(prop => 
         prop.id === parseInt(propertyId, 10) ? updatedProperty : prop
       );
-      
+
       // Save updated properties to localStorage
       localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
-      console.log(`CONTEXT: Property ${propertyId} ratings and score updated locally`);
-      
+
       return newProperties;
     });
 
@@ -278,7 +266,6 @@ export function PropertyProvider({ children }) {
             }
           }
         } catch (ratingError) {
-          console.warn(`Failed to save rating for criterion ${criterionId}:`, ratingError);
         }
       }
 
@@ -294,10 +281,9 @@ export function PropertyProvider({ children }) {
       if (!response.ok) {
         throw new Error(`Failed to update property score: ${response.statusText}`);
       }
-      
+
       const savedProperty = await response.json();
-      console.log(`Property ${propertyId} score synced to backend: ${savedProperty.score}`);
-      
+
       // Update state with backend response to ensure consistency
       setProperties(prevProperties =>
         prevProperties.map(prop => 
@@ -312,7 +298,6 @@ export function PropertyProvider({ children }) {
       );
 
     } catch (error) {
-      console.warn('Failed to sync ratings with backend:', error);
     }
     
     /*
@@ -369,7 +354,6 @@ export function PropertyProvider({ children }) {
             }
           }
         } catch (ratingError) {
-          console.error(`Failed to save rating for criterion ${criterionId}:`, ratingError);
         }
       }
 
@@ -391,7 +375,6 @@ export function PropertyProvider({ children }) {
         prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
       );
     } catch (error) {
-      console.error('Failed to update property:', error);
     }
     */
   }, [properties]); // Only depend on properties
@@ -400,11 +383,9 @@ export function PropertyProvider({ children }) {
   const updatePropertyImages = useCallback(async (propertyId, newImageUrlsArray) => {
       // Basic validation: ensure input is an array
       if (!Array.isArray(newImageUrlsArray)) {
-          console.error("CONTEXT Error: updatePropertyImages requires an array. Received:", newImageUrlsArray);
           return;
       }
-      console.log(`CONTEXT: updatePropertyImages called for ID: ${propertyId} with ${newImageUrlsArray.length} URLs`);
-      
+
       const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
       if (!propertyToUpdate) return;
 
@@ -426,14 +407,12 @@ export function PropertyProvider({ children }) {
           prevProperties.map(prop => (prop.id === savedProperty.id ? savedProperty : prop))
         );
       } catch (error) {
-        console.error('Failed to update property images:', error);
       }
   }, [properties, authenticatedFetch]); // Depends on properties and authenticatedFetch
 
 
   /** Deletes a property by its ID */
   const deleteProperty = useCallback(async (id) => {
-    console.log(`CONTEXT: deleteProperty called for ID: ${id}`);
     try {
       const response = await authenticatedFetch(getApiUrl(`/properties/${id}/`), {
         method: 'DELETE',
@@ -448,13 +427,11 @@ export function PropertyProvider({ children }) {
         return newProperties;
       });
     } catch (error) {
-      console.error('Failed to delete property:', error);
     }
   }, [authenticatedFetch]);
 
   /** Updates an existing property in the state */
   const updateProperty = useCallback(async (id, updatedData) => {
-    console.log(`CONTEXT: updateProperty called for ID: ${id}`, updatedData);
     try {
       const response = await authenticatedFetch(getApiUrl(`/properties/${id}/`), {
         method: 'PUT',
@@ -495,7 +472,6 @@ export function PropertyProvider({ children }) {
         return newProperties;
       });
     } catch (error) {
-      console.error('Failed to update property:', error);
     }
   }, [authenticatedFetch]);
 
@@ -503,7 +479,6 @@ export function PropertyProvider({ children }) {
   const updatePropertyStatus = useCallback(async (propertyId, newStatus, notes = null) => {
     const propertyToUpdate = properties.find(p => p.id === parseInt(propertyId, 10));
     if (!propertyToUpdate) {
-      console.error(`Property with ID ${propertyId} not found`);
       return;
     }
 
@@ -525,12 +500,10 @@ export function PropertyProvider({ children }) {
       const newProperties = prevProperties.map(p =>
         p.id === parseInt(propertyId, 10) ? updatedProperty : p
       );
-      console.log(`CONTEXT: Properties updated. Property ${propertyId} now has status:`, 
-        newProperties.find(p => p.id === parseInt(propertyId, 10))?.status);
-      
+
       // Save updated properties to localStorage
       localStorage.setItem('houseScorecard_properties', JSON.stringify(newProperties));
-      
+
       return newProperties;
     });
 
@@ -552,8 +525,7 @@ export function PropertyProvider({ children }) {
       }
 
       const savedProperty = await response.json();
-      console.log(`Property ${propertyId} status and history synced to backend:`, savedProperty.status);
-      
+
       // Update state with backend response to ensure consistency
       setProperties(prevProperties =>
         prevProperties.map(p =>
@@ -567,7 +539,6 @@ export function PropertyProvider({ children }) {
         )
       );
     } catch (error) {
-      console.error('Failed to sync status with backend:', error);
       // Status update UI feedback is already shown, but backend sync failed
       // Could add error toast here if needed
     }
@@ -591,19 +562,14 @@ export function PropertyProvider({ children }) {
       }
 
       const savedProperty = await response.json();
-      console.log(`CONTEXT: Backend returned property:`, savedProperty);
-      console.log(`CONTEXT: Backend property status:`, savedProperty.status);
-      
+
       // Update with server response to ensure consistency
       setProperties(prevProperties =>
         prevProperties.map(p =>
           p.id === parseInt(propertyId, 10) ? savedProperty : p
         )
       );
-      
-      console.log(`CONTEXT: Property ${propertyId} status updated to ${newStatus}`);
     } catch (error) {
-      console.error('Failed to update property status:', error);
       // Local state is already updated, so user sees immediate feedback
       // Could add error handling here if needed
     }
@@ -613,8 +579,6 @@ export function PropertyProvider({ children }) {
   /** Triggers AI analysis for a specific property */
   const analyzePropertyWithAI = useCallback(async (propertyId) => {
     try {
-      console.log(`CONTEXT: Triggering AI analysis for property ${propertyId}`);
-      
       const response = await authenticatedFetch(getApiUrl(`/properties/${propertyId}/analyze_with_ai/`), {
         method: 'POST',
         headers: {
@@ -654,16 +618,13 @@ export function PropertyProvider({ children }) {
           
           // Save updated properties to localStorage
           localStorage.setItem('houseScorecard_properties', JSON.stringify(updatedProperties));
-          
+
           return updatedProperties;
         });
-        
-        console.log(`CONTEXT: Property ${propertyId} AI analysis completed successfully`);
       }
 
       return result;
     } catch (error) {
-      console.error('Failed to analyze property with AI:', error);
       throw error;
     }
   }, [authenticatedFetch]);
@@ -678,8 +639,6 @@ export function PropertyProvider({ children }) {
       return { geocoded_count: 0, message: 'All properties already have coordinates' };
     }
 
-    console.log(`CONTEXT: Geocoding ${propertiesWithoutCoords.length} properties via backend...`);
-    
     try {
       const response = await authenticatedFetch(getApiUrl('/properties/geocode_properties/'), {
         method: 'POST',
@@ -711,7 +670,6 @@ export function PropertyProvider({ children }) {
 
       return result;
     } catch (error) {
-      console.error('Geocoding failed:', error);
       throw error;
     }
   }, [properties, authenticatedFetch]);

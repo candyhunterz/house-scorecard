@@ -178,7 +178,6 @@ function Criteria() {
 
   /** Initiates editing mode for a specific criterion */
   const handleEdit = (criterion) => {
-    console.log("EDIT: Starting edit for criterion:", criterion);
     setEditingCriterionId(criterion.id);
     setEditText(criterion.text);
     setEditCategory(criterion.category || ''); // Use empty string if category is null/undefined
@@ -191,7 +190,6 @@ function Criteria() {
 
   /** Cancels the current editing mode */
   const handleCancelEdit = () => {
-    console.log("EDIT: Cancelling edit for ID:", editingCriterionId);
     setEditingCriterionId(null); // Clear the editing ID
   };
 
@@ -221,12 +219,10 @@ function Criteria() {
         if (availableRatingTypes.includes(editRatingType)) {
              updatedData.ratingType = editRatingType;
         } else {
-            console.warn(`Attempted to save invalid rating type "${editRatingType}". Reverting to default.`);
             updatedData.ratingType = 'stars'; // Fallback or keep original? Defaulting here.
         }
     }
 
-    console.log("EDIT: Saving changes for ID:", id, "Data:", updatedData);
     updateCriterion(id, updatedData); // Call context function to save changes
     handleCancelEdit(); // Exit editing mode
   }; // End handleSaveEdit
@@ -244,12 +240,9 @@ function Criteria() {
       cancelText: "Cancel",
       type: "danger"
     });
-    
+
     if (confirmed) {
-      console.log("DELETE: Deleting criterion ID:", id);
       deleteCriterion(id); // Call context function
-    } else {
-       console.log("DELETE: Deletion cancelled for ID:", id);
     }
   }; // End handleDelete
 

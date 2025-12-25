@@ -72,7 +72,7 @@ def _get_or_create_browser():
         # Use more realistic context for realtor.ca
         _playwright_context = _playwright_browser.new_context(
             viewport={'width': 1366, 'height': 768},  # More common screen size
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             extra_http_headers={
                 'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -145,7 +145,7 @@ def geocode_address(address):
                 'countrycodes': 'ca,us'
             },
             timeout=10,
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'},
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'},
             impersonate="chrome120"
         )
         data = response.json()
@@ -209,7 +209,7 @@ def _scrape_with_isolated_playwright(url):
         # Create fresh context
         context = browser.new_context(
             viewport={'width': 1366, 'height': 768},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             extra_http_headers={
                 'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -403,6 +403,16 @@ def _scrape_with_playwright(url):
 
 # Configure logger for scraping operations
 logger = logging.getLogger(__name__)
+
+def _human_like_delay(min_seconds=1.0, max_seconds=3.0, action_name="browsing"):
+    """Add a random delay to simulate human behavior"""
+    delay = random.uniform(min_seconds, max_seconds)
+    # Add occasional longer pauses (10% chance)
+    if random.random() < 0.1:
+        delay += random.uniform(1.0, 3.0)
+    logger.debug(f"Human-like delay ({action_name}): {delay:.1f}s")
+    time.sleep(delay)
+    return delay
 
 class UserCreate(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -934,18 +944,19 @@ class PropertyViewSet(viewsets.ModelViewSet):
         # Extended list of realistic user agents with more recent versions
         # Note: curl_cffi handles User-Agent automatically based on impersonation, but we keep these for header variation
         user_agents = [
-            # Chrome on Windows (most common)
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            # Chrome on Windows (December 2024)
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
             # Chrome on Mac
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            # Firefox
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0',
-            # Safari
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-            # Edge
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            # Firefox (December 2024)
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0',
+            # Safari (December 2024)
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+            # Edge (December 2024)
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
         ]
         
         # More sophisticated header variations
@@ -996,7 +1007,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
         ]
         
         # Single attempt - users don't want to wait
-        max_attempts = 1
+        max_attempts = 3
         session = None
         response = None
         
@@ -1139,6 +1150,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
         
         # Strategy 2: Fall back to curl_cffi method
         for attempt in range(max_attempts):
+            # Exponential backoff with jitter for retries
+            if attempt > 0:
+                backoff_delay = (2 ** attempt) + random.uniform(0, 2)
+                logger.info(f"Retry {attempt}: waiting {backoff_delay:.1f} seconds before next attempt")
+                time.sleep(backoff_delay)
+
             try:
                 logger.info(f"Scraping attempt {attempt + 1}/{max_attempts} for URL: {url}")
                 if attempt == 0:
@@ -1146,7 +1163,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 
                 # Use curl_cffi session with browser impersonation to bypass anti-bot protection
                 # Try different browser fingerprints for better success rate
-                browser_types = ["chrome120", "chrome110", "safari15_5", "edge99"]
+                browser_types = ["chrome131", "chrome124", "safari17_0", "edge131"]
                 selected_browser = random.choice(browser_types)
                 logger.info(f"Using browser impersonation: {selected_browser}")
                 session = cf_requests.Session(impersonate=selected_browser)
@@ -1189,19 +1206,24 @@ class PropertyViewSet(viewsets.ModelViewSet):
                         # Visit homepage first with minimal delay
                         home_response = session.get('https://www.realtor.ca/', headers=home_headers, timeout=15)
                         logger.info(f"Homepage visit: {home_response.status_code}, cookies: {len(session.cookies)}")
-                        
-                        # Small delay between requests
-                        time.sleep(random.uniform(1.0, 2.0))
+
+                        # Variable delay to mimic human behavior - reading the homepage
+                        reading_delay = random.uniform(1.5, 3.5)
+                        logger.info(f"Simulating {reading_delay:.1f}s page reading time")
+                        time.sleep(reading_delay)
                         
                     except Exception as e:
                         logger.warning(f"Homepage visit failed: {e}, proceeding with direct request")
 
                 # Make the actual request to target URL
                 target_url = url
-                
-                # Add longer delay to appear more human-like and avoid rate limiting
-                delay = random.uniform(3.0, 6.0)  # Even longer delay for Incapsula bypass
-                logger.info(f"Adding {delay:.1f} second delay to avoid rate limiting")
+
+                # Human-like delay with variable timing based on attempt number
+                # First attempt: shorter delay, subsequent attempts: longer delays
+                base_delay = 2.0 if attempt == 0 else 4.0
+                jitter = random.uniform(0.5, 2.5)
+                delay = base_delay + jitter + (attempt * 1.5)  # Increase delay with each retry
+                logger.info(f"Adding {delay:.1f} second human-like delay (attempt {attempt + 1})")
                 time.sleep(delay)
                 
                 # Update headers for the actual listing request
@@ -1221,7 +1243,12 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 
                 # Check for JavaScript challenge pages and common blocks
                 content_lower = response.text.lower()
-                if any(indicator in content_lower for indicator in ['incapsula', 'blocked', 'security check', 'please wait', 'checking your browser']):
+                js_challenge_indicators = [
+                    'incapsula', 'imperva', 'blocked', 'security check',
+                    'please wait', 'checking your browser', 'just a moment',
+                    'enable javascript', 'browser verification', 'ddos protection'
+                ]
+                if any(indicator in content_lower for indicator in js_challenge_indicators):
                     # Try to handle simple JavaScript challenges
                     if 'please wait' in content_lower and len(response.text) < 2000:
                         logger.info("Detected JavaScript challenge, waiting and retrying...")
@@ -1237,13 +1264,16 @@ class PropertyViewSet(viewsets.ModelViewSet):
                 
                 break  # Success, exit retry loop
                 
-            except requests.RequestException as e:
-                logger.warning(f"Scraping attempt failed: {str(e)}")
-                # Single attempt failed - provide immediate guidance
-                if is_realtor_ca:
-                    raise Exception(f'Realtor.ca is blocking automated requests. This is common due to their anti-bot protection.\n\nTry these alternatives:\n1. Copy the property details manually from your browser\n2. Try again in 30-60 minutes\n3. Use the mobile version: m.realtor.ca\n4. Use a different internet connection')
-                else:
-                    raise Exception(f'Unable to access the listing URL. The website may be temporarily unavailable or blocking automated requests. Please try again later or manually enter the property details.')
+            except (requests.RequestException, Exception) as e:
+                logger.warning(f"Scraping attempt {attempt + 1}/{max_attempts} failed: {str(e)}")
+                if attempt == max_attempts - 1:
+                    # Final attempt failed - provide guidance
+                    if is_realtor_ca:
+                        raise Exception(f'Realtor.ca is blocking automated requests after {max_attempts} attempts. This is common due to their anti-bot protection.\n\nTry these alternatives:\n1. Copy the property details manually from your browser\n2. Try again in 30-60 minutes\n3. Use the mobile version: m.realtor.ca\n4. Use a different internet connection')
+                    else:
+                        raise Exception(f'Unable to access the listing URL after {max_attempts} attempts. The website may be temporarily unavailable or blocking automated requests. Please try again later or manually enter the property details.')
+                # Continue to next attempt
+                continue
         
         # If we get here, we have a successful response
         if not response:
@@ -1263,7 +1293,23 @@ class PropertyViewSet(viewsets.ModelViewSet):
         
         # Debug: Check if we got blocked by anti-bot protection
         page_text = soup.get_text().lower()
-        blocking_keywords = ['blocked', 'incapsula', 'access denied', 'cloudflare', 'captcha', 'robot', 'automated', 'request unsuccessful', 'incident id']
+        blocking_keywords = [
+            # Anti-bot services
+            'incapsula', 'imperva', 'cloudflare', 'akamai', 'datadome', 'perimeterx',
+            'distil', 'kasada', 'shape security',
+            # Generic blocking indicators
+            'blocked', 'access denied', 'forbidden', 'not allowed',
+            'captcha', 'recaptcha', 'hcaptcha', 'challenge',
+            'robot', 'bot detected', 'automated', 'suspicious activity',
+            'request unsuccessful', 'incident id', 'ray id',
+            # Rate limiting
+            'rate limit', 'too many requests', 'slow down',
+            # JavaScript challenges
+            'please wait', 'checking your browser', 'just a moment',
+            'verify you are human', 'one more step', 'security check',
+            # Error pages
+            'error 403', 'error 429', 'error 503',
+        ]
         
         for keyword in blocking_keywords:
             if keyword in page_text:

@@ -75,7 +75,15 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',
+        'user': '100/minute',
+    }
 }
 
 from datetime import timedelta
@@ -185,8 +193,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://house-scorecard.vercel.app',
 ]
 
-# Temporarily allow all origins for debugging (remove in production)
-CORS_ALLOW_ALL_ORIGINS = True
+# Use explicit allowed origins for security
+CORS_ALLOW_ALL_ORIGINS = False
 
 # Allow additional headers for authentication
 CORS_ALLOW_HEADERS = [
@@ -243,3 +251,10 @@ CELERY_TIMEZONE = 'UTC'
 
 # OpenAI settings (for future use)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')  # Optional, for future OpenAI integration
+
+# HTTPS enforcement for production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
