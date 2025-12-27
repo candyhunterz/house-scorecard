@@ -1423,147 +1423,175 @@ class PropertyViewSet(viewsets.ModelViewSet):
         return scraped_data
 
     def _scrape_zealty(self, url, session):
-        """Special scraping method for Zealty.ca listings that extract data from JavaScript variables."""
+        """Special scraping method for Zealty.ca listings - updated for Next.js RSC structure."""
         import re
         from bs4 import BeautifulSoup
-        
+
         try:
             logger.info(f"Scraping Zealty.ca listing: {url}")
-            
+
             # Configure session with realistic headers
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1'
             }
-            
+
             session.headers.update(headers)
             response = session.get(url, timeout=15, allow_redirects=True)
             response.raise_for_status()
-            
+
             logger.info(f"Successfully fetched Zealty.ca page, content length: {len(response.content)} bytes")
-            
+
             content = response.text
-            
-            # Extract gData variable which contains tab-delimited property data
-            gdata_pattern = r'var gData = "([^"]+)"'
-            gdata_match = re.search(gdata_pattern, content)
-            
-            if not gdata_match:
-                raise Exception("Could not find property data in Zealty.ca listing. The page structure may have changed.")
-            
-            gdata = gdata_match.group(1)
-            fields = gdata.split('\t')
-            
-            if len(fields) < 15:
-                raise Exception("Zealty.ca property data format appears to have changed.")
-            
-            logger.info(f"Successfully extracted Zealty.ca data with {len(fields)} fields")
-            
-            # Extract data from known field positions
+            soup = BeautifulSoup(content, 'html.parser')
             scraped_data = {}
-            
-            # Address (Field 5) - combine with building name if available
-            address = fields[5] if len(fields) > 5 else None
-            building = fields[4] if len(fields) > 4 and fields[4] else None
-            if address:
-                # Add city from field 36 if available
-                city = fields[36] if len(fields) > 36 and fields[36] else None
-                if city:
-                    full_address = f"{address}, {city}"
-                else:
-                    full_address = address
-                scraped_data['address'] = full_address
-                logger.info(f"Extracted address: {full_address}")
-            
-            # Price (Field 7) - multiply by 1000 since it's in thousands
-            price_str = fields[7] if len(fields) > 7 else None
-            if price_str:
+
+            # Method 1: Try JSON-LD structured data first (most reliable)
+            json_ld_scripts = soup.find_all('script', type='application/ld+json')
+            for script in json_ld_scripts:
                 try:
-                    price = float(price_str) * 1000  # Convert from thousands to actual price
-                    scraped_data['price'] = int(price)
-                    logger.info(f"Extracted price: ${int(price):,}")
-                except ValueError:
-                    pass
-            
-            # Bedrooms (Field 12)
-            beds_str = fields[12] if len(fields) > 12 else None
-            if beds_str and beds_str.isdigit():
-                scraped_data['beds'] = int(beds_str)
-                logger.info(f"Extracted bedrooms: {beds_str}")
-            
-            # Bathrooms (Field 13) 
-            baths_str = fields[13] if len(fields) > 13 else None
-            if baths_str and baths_str.replace('.', '').isdigit():
-                scraped_data['baths'] = float(baths_str)
-                logger.info(f"Extracted bathrooms: {baths_str}")
-            
-            # Square footage (Field 14)
-            sqft_str = fields[14] if len(fields) > 14 else None
-            if sqft_str and sqft_str.isdigit():
-                scraped_data['sqft'] = int(sqft_str)
-                logger.info(f"Extracted square footage: {sqft_str}")
-            
-            # Description (Field 8) - the long description text
-            description_str = fields[8] if len(fields) > 8 else None
-            if description_str and len(description_str.strip()) > 20:
-                # Clean up the description text
-                cleaned_description = ' '.join(description_str.split())
-                scraped_data['description'] = cleaned_description
-                logger.info(f"Extracted description: {len(cleaned_description)} characters")
-            
-            # Images (Field 138) - pipe-delimited URLs
-            if len(fields) > 138 and fields[138]:
-                raw_image_urls = [url.strip() for url in fields[138].split('|') if url.strip()]
-                if raw_image_urls:
-                    # Validate and optimize images for consistent sizing
-                    optimized_images = self._validate_and_optimize_images(raw_image_urls)
-                    scraped_data['images'] = optimized_images
-                    logger.info(f"Extracted {len(raw_image_urls)} images, optimized {len(optimized_images)}")
-            
-            # AI analysis is now handled separately via /analyze endpoint
-            if False:  # Disabled - moved to separate endpoint
-                try:
-                    logger.info("Starting AI analysis of scraped Zealty.ca property data")
-                    analyzer = get_ai_analyzer()
-                    
-                    # Prepare data for AI analysis
-                    ai_input_data = {
-                        'address': scraped_data.get('address', 'Unknown address'),
-                        'price': scraped_data.get('price'),
-                        'beds': scraped_data.get('beds'),
-                        'baths': scraped_data.get('baths'),
-                        'sqft': scraped_data.get('sqft'),
-                        'imageUrls': scraped_data.get('images', []),
-                        'description': scraped_data.get('description', 'No description available')
-                    }
-                    
-                    # Run AI analysis with batching support for all images
-                    ai_result = analyzer.analyze_property_comprehensive(ai_input_data)
-                    
-                    if ai_result and not ai_result.get('error'):
-                        logger.info("AI analysis completed successfully for Zealty.ca listing")
-                        # Add AI analysis fields to scraped_data
-                        scraped_data['ai_analysis'] = ai_result
-                    else:
-                        logger.warning(f"AI analysis failed: {ai_result.get('error', 'Unknown error') if ai_result else 'No result returned'}")
-                        
-                except Exception as e:
-                    logger.error(f"AI analysis error: {str(e)}")
-                    # Continue without AI analysis
-                    scraped_data.update({
-                        'error': f"AI analysis failed: {str(e)}",
-                        'analysis_summary': 'AI analysis could not be completed'
-                    })
-            else:
-                logger.info("No images available for AI analysis")
-            
+                    ld_data = json.loads(script.string)
+                    if isinstance(ld_data, dict) and ld_data.get('@type') == 'RealEstateListing':
+                        logger.info("Found JSON-LD RealEstateListing data")
+
+                        # Extract address
+                        if 'address' in ld_data:
+                            addr = ld_data['address']
+                            if isinstance(addr, dict):
+                                parts = [addr.get('streetAddress', ''), addr.get('addressLocality', '')]
+                                scraped_data['address'] = ', '.join(p for p in parts if p)
+                            else:
+                                scraped_data['address'] = str(addr)
+
+                        # Extract price
+                        if 'offers' in ld_data and isinstance(ld_data['offers'], dict):
+                            price = ld_data['offers'].get('price')
+                            if price:
+                                scraped_data['price'] = int(float(price))
+
+                        # Extract description
+                        if 'description' in ld_data:
+                            scraped_data['description'] = ld_data['description']
+
+                        # Extract images
+                        if 'image' in ld_data:
+                            images = ld_data['image']
+                            if isinstance(images, list):
+                                scraped_data['images'] = self._validate_and_optimize_images(images[:20])
+                            elif isinstance(images, str):
+                                scraped_data['images'] = [images]
+
+                        break
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.debug(f"Failed to parse JSON-LD: {e}")
+                    continue
+
+            # Method 2: Extract from Next.js RSC stream data (self.__next_f arrays)
+            if not scraped_data.get('address'):
+                logger.info("Trying RSC stream extraction for Zealty.ca")
+
+                # Find all script tags and look for __next_f data
+                scripts = soup.find_all('script')
+                for script in scripts:
+                    if script.string and 'self.__next_f' in script.string:
+                        script_content = script.string
+
+                        # Extract address pattern: "address":"..."
+                        addr_match = re.search(r'"address"\s*:\s*"([^"]+)"', script_content)
+                        if addr_match and not scraped_data.get('address'):
+                            address = addr_match.group(1)
+                            # Also try to find city
+                            city_match = re.search(r'"city"\s*:\s*"([^"]+)"', script_content)
+                            if city_match:
+                                scraped_data['address'] = f"{address}, {city_match.group(1)}"
+                            else:
+                                scraped_data['address'] = address
+                            logger.info(f"RSC extracted address: {scraped_data['address']}")
+
+                        # Extract price pattern: "price":1234567
+                        price_match = re.search(r'"price"\s*:\s*(\d+)', script_content)
+                        if price_match and not scraped_data.get('price'):
+                            scraped_data['price'] = int(price_match.group(1))
+                            logger.info(f"RSC extracted price: ${scraped_data['price']:,}")
+
+                        # Extract bedrooms: "bedrooms":4
+                        beds_match = re.search(r'"bedrooms"\s*:\s*(\d+)', script_content)
+                        if beds_match and not scraped_data.get('beds'):
+                            scraped_data['beds'] = int(beds_match.group(1))
+                            logger.info(f"RSC extracted beds: {scraped_data['beds']}")
+
+                        # Extract bathrooms: "bathrooms":2
+                        baths_match = re.search(r'"bathrooms"\s*:\s*(\d+\.?\d*)', script_content)
+                        if baths_match and not scraped_data.get('baths'):
+                            scraped_data['baths'] = float(baths_match.group(1))
+                            logger.info(f"RSC extracted baths: {scraped_data['baths']}")
+
+                        # Extract square feet: "squareFeet":1903
+                        sqft_match = re.search(r'"squareFeet"\s*:\s*(\d+)', script_content)
+                        if sqft_match and not scraped_data.get('sqft'):
+                            scraped_data['sqft'] = int(sqft_match.group(1))
+                            logger.info(f"RSC extracted sqft: {scraped_data['sqft']}")
+
+                        # Extract description
+                        desc_match = re.search(r'"description"\s*:\s*"([^"]{50,})"', script_content)
+                        if desc_match and not scraped_data.get('description'):
+                            # Unescape JSON string
+                            desc = desc_match.group(1).replace('\\n', ' ').replace('\\r', '')
+                            scraped_data['description'] = desc
+                            logger.info(f"RSC extracted description: {len(desc)} chars")
+
+                        # Extract images array: "images":["url1","url2"]
+                        if not scraped_data.get('images'):
+                            # Look for image URLs in the content
+                            img_urls = re.findall(r'https://[^"]+\.(?:jpg|jpeg|png|webp)[^"]*', script_content)
+                            if img_urls:
+                                # Deduplicate and limit
+                                unique_imgs = list(dict.fromkeys(img_urls))[:20]
+                                scraped_data['images'] = self._validate_and_optimize_images(unique_imgs)
+                                logger.info(f"RSC extracted {len(scraped_data['images'])} images")
+
+            # Method 3: Fallback to legacy gData format (for older pages)
+            if not scraped_data.get('address'):
+                gdata_pattern = r'var gData = "([^"]+)"'
+                gdata_match = re.search(gdata_pattern, content)
+
+                if gdata_match:
+                    logger.info("Found legacy gData format")
+                    gdata = gdata_match.group(1)
+                    fields = gdata.split('\t')
+
+                    if len(fields) >= 15:
+                        if len(fields) > 5 and fields[5]:
+                            city = fields[36] if len(fields) > 36 and fields[36] else None
+                            scraped_data['address'] = f"{fields[5]}, {city}" if city else fields[5]
+                        if len(fields) > 7 and fields[7]:
+                            try:
+                                scraped_data['price'] = int(float(fields[7]) * 1000)
+                            except ValueError:
+                                pass
+                        if len(fields) > 12 and fields[12].isdigit():
+                            scraped_data['beds'] = int(fields[12])
+                        if len(fields) > 13 and fields[13].replace('.', '').isdigit():
+                            scraped_data['baths'] = float(fields[13])
+                        if len(fields) > 14 and fields[14].isdigit():
+                            scraped_data['sqft'] = int(fields[14])
+                        if len(fields) > 8 and len(fields[8].strip()) > 20:
+                            scraped_data['description'] = ' '.join(fields[8].split())
+                        if len(fields) > 138 and fields[138]:
+                            raw_urls = [u.strip() for u in fields[138].split('|') if u.strip()]
+                            scraped_data['images'] = self._validate_and_optimize_images(raw_urls)
+
+            # Validate we got at least some data
+            if not scraped_data.get('address') and not scraped_data.get('price'):
+                raise Exception("Could not extract property data from Zealty.ca. The page structure may have changed.")
+
             logger.info(f"Zealty.ca scraping completed successfully with {len(scraped_data)} data fields")
             return scraped_data
-            
+
         except Exception as e:
             logger.error(f"Zealty.ca scraping failed: {str(e)}")
             raise Exception(f'Failed to extract data from Zealty.ca listing: {str(e)}\n\n💡 Manual workaround:\n1. Open the listing URL in your browser: {url}\n2. Copy the address, price, beds, baths, and sq ft\n3. Paste the details into the form manually\n4. For images, right-click on property photos and copy image URLs')
