@@ -1473,6 +1473,29 @@ class PropertyViewSet(viewsets.ModelViewSet):
                             if price:
                                 scraped_data['price'] = int(float(price))
 
+                        # Extract bedrooms (JSON-LD uses numberOfBedrooms)
+                        if 'numberOfBedrooms' in ld_data:
+                            try:
+                                scraped_data['beds'] = int(ld_data['numberOfBedrooms'])
+                            except (ValueError, TypeError):
+                                pass
+
+                        # Extract bathrooms (JSON-LD uses numberOfBathroomsTotal)
+                        if 'numberOfBathroomsTotal' in ld_data:
+                            try:
+                                scraped_data['baths'] = float(ld_data['numberOfBathroomsTotal'])
+                            except (ValueError, TypeError):
+                                pass
+
+                        # Extract square feet (JSON-LD uses floorSize.value)
+                        if 'floorSize' in ld_data:
+                            floor_size = ld_data['floorSize']
+                            if isinstance(floor_size, dict) and 'value' in floor_size:
+                                try:
+                                    scraped_data['sqft'] = int(floor_size['value'])
+                                except (ValueError, TypeError):
+                                    pass
+
                         # Extract description
                         if 'description' in ld_data:
                             scraped_data['description'] = ld_data['description']
@@ -1491,18 +1514,19 @@ class PropertyViewSet(viewsets.ModelViewSet):
                     continue
 
             # Method 2: Extract from Next.js RSC stream data (self.__next_f arrays)
-            if not scraped_data.get('address'):
-                logger.info("Trying RSC stream extraction for Zealty.ca")
+            # Always try this to fill in any missing fields
+            logger.info("Trying RSC stream extraction for Zealty.ca")
 
-                # Find all script tags and look for __next_f data
-                scripts = soup.find_all('script')
-                for script in scripts:
-                    if script.string and 'self.__next_f' in script.string:
-                        script_content = script.string
+            # Find all script tags and look for __next_f data
+            scripts = soup.find_all('script')
+            for script in scripts:
+                if script.string and 'self.__next_f' in script.string:
+                    script_content = script.string
 
-                        # Extract address pattern: "address":"..."
+                    # Extract address pattern: "address":"..."
+                    if not scraped_data.get('address'):
                         addr_match = re.search(r'"address"\s*:\s*"([^"]+)"', script_content)
-                        if addr_match and not scraped_data.get('address'):
+                        if addr_match:
                             address = addr_match.group(1)
                             # Also try to find city
                             city_match = re.search(r'"city"\s*:\s*"([^"]+)"', script_content)
@@ -1512,47 +1536,62 @@ class PropertyViewSet(viewsets.ModelViewSet):
                                 scraped_data['address'] = address
                             logger.info(f"RSC extracted address: {scraped_data['address']}")
 
-                        # Extract price pattern: "price":1234567
+                    # Extract price pattern: "price":1234567
+                    if not scraped_data.get('price'):
                         price_match = re.search(r'"price"\s*:\s*(\d+)', script_content)
-                        if price_match and not scraped_data.get('price'):
+                        if price_match:
                             scraped_data['price'] = int(price_match.group(1))
                             logger.info(f"RSC extracted price: ${scraped_data['price']:,}")
 
-                        # Extract bedrooms: "bedrooms":4
+                    # Extract bedrooms: "bedrooms":4
+                    if not scraped_data.get('beds'):
                         beds_match = re.search(r'"bedrooms"\s*:\s*(\d+)', script_content)
-                        if beds_match and not scraped_data.get('beds'):
+                        if beds_match:
                             scraped_data['beds'] = int(beds_match.group(1))
                             logger.info(f"RSC extracted beds: {scraped_data['beds']}")
 
-                        # Extract bathrooms: "bathrooms":2
+                    # Extract bathrooms: "bathrooms":2
+                    if not scraped_data.get('baths'):
                         baths_match = re.search(r'"bathrooms"\s*:\s*(\d+\.?\d*)', script_content)
-                        if baths_match and not scraped_data.get('baths'):
+                        if baths_match:
                             scraped_data['baths'] = float(baths_match.group(1))
                             logger.info(f"RSC extracted baths: {scraped_data['baths']}")
 
-                        # Extract square feet: "squareFeet":1903
+                    # Extract square feet: "squareFeet":1903
+                    if not scraped_data.get('sqft'):
                         sqft_match = re.search(r'"squareFeet"\s*:\s*(\d+)', script_content)
-                        if sqft_match and not scraped_data.get('sqft'):
+                        if sqft_match:
                             scraped_data['sqft'] = int(sqft_match.group(1))
                             logger.info(f"RSC extracted sqft: {scraped_data['sqft']}")
 
-                        # Extract description
+                    # Extract description
+                    if not scraped_data.get('description'):
                         desc_match = re.search(r'"description"\s*:\s*"([^"]{50,})"', script_content)
-                        if desc_match and not scraped_data.get('description'):
+                        if desc_match:
                             # Unescape JSON string
                             desc = desc_match.group(1).replace('\\n', ' ').replace('\\r', '')
                             scraped_data['description'] = desc
                             logger.info(f"RSC extracted description: {len(desc)} chars")
 
-                        # Extract images array: "images":["url1","url2"]
-                        if not scraped_data.get('images'):
-                            # Look for image URLs in the content
-                            img_urls = re.findall(r'https://[^"]+\.(?:jpg|jpeg|png|webp)[^"]*', script_content)
+                    # Extract images array: "images":["url1","url2",...]
+                    if not scraped_data.get('images') or len(scraped_data.get('images', [])) < 5:
+                        # Look for the images array specifically
+                        images_match = re.search(r'"images"\s*:\s*\[((?:"[^"]+",?\s*)+)\]', script_content)
+                        if images_match:
+                            # Extract individual URLs from the array
+                            img_array_str = images_match.group(1)
+                            img_urls = re.findall(r'"(https://[^"]+)"', img_array_str)
                             if img_urls:
-                                # Deduplicate and limit
                                 unique_imgs = list(dict.fromkeys(img_urls))[:20]
                                 scraped_data['images'] = self._validate_and_optimize_images(unique_imgs)
-                                logger.info(f"RSC extracted {len(scraped_data['images'])} images")
+                                logger.info(f"RSC extracted {len(scraped_data['images'])} images from array")
+                        else:
+                            # Fallback: find any cloudfront image URLs
+                            img_urls = re.findall(r'https://[^"\\]+cloudfront\.net[^"\\]+\.(?:jpg|jpeg|png|webp)', script_content)
+                            if img_urls:
+                                unique_imgs = list(dict.fromkeys(img_urls))[:20]
+                                scraped_data['images'] = self._validate_and_optimize_images(unique_imgs)
+                                logger.info(f"RSC extracted {len(scraped_data['images'])} cloudfront images")
 
             # Method 3: Fallback to legacy gData format (for older pages)
             if not scraped_data.get('address'):
